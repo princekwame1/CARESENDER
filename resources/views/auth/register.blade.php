@@ -6,6 +6,9 @@
                 <img src="/images/brand/icon-128.webp" alt="" width="64" height="64" class="size-16">
                 <h1 class="mt-5 text-2xl font-bold">Create an account</h1>
                 <p class="mt-1 text-sm text-muted">Use it on this website and in the CareSenda app.</p>
+                @if (str_starts_with((string) request('back'), '/search/checkout/'))
+                    <p class="mt-3 rounded-2xl bg-brand-soft px-4 py-2 text-sm text-brand">Next, you’ll pay with Paystack and go straight to your search results.</p>
+                @endif
             </div>
             <x-social-sign-in class="sm:grid-cols-2" />
             <div class="grid gap-5 sm:grid-cols-2">

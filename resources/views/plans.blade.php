@@ -17,25 +17,14 @@
         @auth
             @if ($required)
                 <section class="card mt-8 p-6">
-                    <h2 class="text-lg font-bold">Your access</h2>
+                    <div class="flex items-center justify-between gap-3">
+                        <h2 class="text-lg font-bold">Your access</h2>
+                        <a href="{{ route('account') }}" class="text-sm font-semibold text-brand underline">Your account</a>
+                    </div>
                     @if ($passes->isEmpty())
                         <p class="mt-2 text-sm text-muted">You don’t have a plan yet. Choose one below.</p>
                     @else
-                        <ul class="mt-4 grid gap-3 sm:grid-cols-2">
-                            @foreach ($passes as $pass)
-                                <li class="rounded-2xl bg-surface-2 px-4 py-3 text-sm">
-                                    <span class="font-semibold">{{ $pass->plan_name }}</span>
-                                    <span class="block text-xs text-muted">Opens: {{ \App\Models\AccessPlan::areasLabel($pass->areas) }}</span>
-                                    <span class="mt-1 block text-xs">
-                                        @if (! $pass->isUnlimited()){{ $pass->searches_left }} of {{ $pass->searches_total }} searches left · @endif
-                                        {{ $pass->expires_at ? 'Until '.$pass->expires_at->format('j M Y, g:i a') : 'Never runs out' }}
-                                    </span>
-                                </li>
-                            @endforeach
-                        </ul>
-                        @if ($fullUntil)
-                            <p class="mt-3 text-sm text-muted">Everything is open until {{ $fullUntil->format('j M Y, g:i a') }}.</p>
-                        @endif
+                        <x-access-passes class="mt-4" :passes="$passes" :full-until="$fullUntil" />
                     @endif
                 </section>
             @endif

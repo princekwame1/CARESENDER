@@ -109,6 +109,56 @@ class SearchController extends Controller
         return $url ? redirect()->away($url) : $back->withErrors(['unlock' => 'We could not start the payment. Please try again.']);
     }
 
+    /**
+     * The access option picked on a locked search. A single search goes straight to Paystack, no account needed;
+     * any other plan needs an account first (visitors sign up and come back to checkout).
+     */
+    public function access(Request $request, AccessGate $gate, PaystackClient $paystack): RedirectResponse
+    {
+        $plan = AccessPlan::available()->find($request->integer('plan'));
+        if ($plan === null || $plan->sellsToGuests()) {
+            return $this->buy($request, $gate, $paystack);
+        }
+
+        $filters = SearchFilters::fromRequest($request, useLocationCookie: true);
+        $tab = $request->input('tab') === 'facilities' ? 'facilities' : 'services';
+        $checkout = route('search.checkout', ['plan' => $plan] + self::searchParams($filters, $tab), absolute: false);
+
+        return $request->user() ? redirect($checkout) : redirect()->route('register', ['back' => $checkout]);
+    }
+
+    /** Pay for a plan from a locked search; once Paystack confirms, the payer comes back to that search, now open. */
+    public function checkout(Request $request, AccessPlan $plan, AccessGate $gate, PaystackClient $paystack): RedirectResponse
+    {
+        $filters = SearchFilters::fromRequest($request, useLocationCookie: true);
+        $tab = $request->input('tab') === 'facilities' ? 'facilities' : 'services';
+        $back = redirect()->route('search', self::searchParams($filters, $tab));
+        $user = $request->user();
+
+        $searched = self::tabFilters($filters, $tab);
+        if (! filled($filters->q)) {
+            return $back->withErrors(['unlock' => 'Search for something first, then open the results.']);
+        }
+        if (! $plan->is_active || ! array_intersect(AccessGate::areasForSearch($searched), $plan->coveredAreas())) {
+            return $back->withErrors(['unlock' => 'That plan doesn’t open these results. Choose another option.']);
+        }
+        if (! AccessGate::enabled() || ! $paystack->configured()) {
+            return $back->withErrors(['unlock' => 'Payments are temporarily unavailable. Please try again later.']);
+        }
+        if ($gate->forSearch($request, $searched)['unlocked']) {
+            return $back;
+        }
+
+        try {
+            [, $url] = $gate->checkoutSearch($plan, $searched, $user->email, $user, null, route('search.paid'));
+        } catch (RuntimeException $e) {
+            report($e);
+            $url = null;
+        }
+
+        return $url ? redirect()->away($url) : $back->withErrors(['unlock' => 'We could not start the payment. Please try again.']);
+    }
+
     /** Paystack sends the payer here with ?reference=…; check the payment and go back to the search, now open. */
     public function paid(Request $request, AccessGate $gate): RedirectResponse
     {

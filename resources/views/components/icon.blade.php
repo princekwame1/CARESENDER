@@ -1,6 +1,7 @@
 @props(['name'])
 @php
     $paths = [
+        'user' => '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
         'search' => '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>',
         'home' => '<path d="m3 10 9-7 9 7v11H3zM9 21v-8h6v8"/>',
         'pin' => '<path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',

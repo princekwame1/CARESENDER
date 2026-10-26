@@ -175,10 +175,10 @@ class SubscriptionWebTest extends DirectoryTestCase
             'api.paystack.co/transaction/verify/*' => Http::response(['status' => true, 'data' => ['status' => 'success', 'amount' => $plan->total(), 'currency' => 'GHS']]),
         ]);
 
-        $this->get('/search?q=gynaecologist')->assertSee('Just this search?')->assertSee('No account needed');
-        $this->post('/search/buy', ['q' => 'gynaecologist', 'tab' => 'services'])->assertSessionHasErrors('email');
+        $this->get('/search?q=gynaecologist')->assertSee('View findings')->assertSee('Single search access')->assertSee('No account needed');
+        $this->post('/search/access', ['plan' => $plan->id, 'q' => 'gynaecologist', 'tab' => 'services'])->assertSessionHasErrors('email');
 
-        $response = $this->post('/search/buy', ['q' => 'gynaecologist', 'tab' => 'services', 'email' => 'guest@example.com'])
+        $response = $this->post('/search/access', ['plan' => $plan->id, 'q' => 'gynaecologist', 'tab' => 'services', 'email' => 'guest@example.com'])
             ->assertRedirect('https://checkout.paystack.com/one')
             ->assertCookie('cs_guest');
         Http::assertSent(fn ($r) => str_contains($r->url(), 'initialize') && $r['email'] === 'guest@example.com' && $r['amount'] === $plan->total());
@@ -196,5 +196,68 @@ class SubscriptionWebTest extends DirectoryTestCase
         $this->assertSame(['paid', 0], [$pass->fresh()->status, $pass->fresh()->searches_left]);
         $this->withCookie('cs_guest', $guest)->get('/search?q=gynaecologist')->assertSee('Dansoman Family Clinic')->assertSee('Dr. Ama Mensah');
         $this->withCookie('cs_guest', $guest)->get('/search?q=legon&tab=facilities')->assertDontSee('tel:+233200000001', false);
+    }
+
+    public function test_visitors_choosing_a_multiple_search_pass_sign_up_pay_and_return_to_their_search(): void
+    {
+        $plan = AccessPlan::where('name', 'Full week')->firstOrFail();
+        Http::fake([
+            'api.paystack.co/transaction/initialize' => Http::response(['status' => true, 'data' => ['authorization_url' => 'https://checkout.paystack.com/week']]),
+            'api.paystack.co/transaction/verify/*' => Http::response(['status' => true, 'data' => ['status' => 'success', 'amount' => $plan->total(), 'currency' => 'GHS']]),
+        ]);
+        $checkout = route('search.checkout', ['plan' => $plan, 'q' => 'gynaecologist', 'tab' => 'services'], absolute: false);
+
+        $this->get('/search?q=gynaecologist')->assertSee('Full week')->assertSee('Create an account to continue');
+        $this->post('/search/access', ['plan' => $plan->id, 'q' => 'gynaecologist', 'tab' => 'services'])
+            ->assertRedirect(route('register', ['back' => $checkout]));
+
+        $this->get('/register?back='.urlencode($checkout))->assertSee('Next, you’ll pay with Paystack', false);
+        $this->post('/register', ['name' => 'Ama', 'email' => 'ama@example.test', 'phone_country' => 'GH', 'phone' => '024 000 0000', 'password' => 'secret123', 'password_confirmation' => 'secret123'])
+            ->assertRedirect(url($checkout));
+
+        $this->get($checkout)->assertRedirect('https://checkout.paystack.com/week');
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'initialize') && $r['email'] === 'ama@example.test' && $r['callback_url'] === route('search.paid'));
+
+        $pass = AccessPass::where('user_id', User::where('email', 'ama@example.test')->value('id'))->firstOrFail();
+        $this->get('/search/paid?reference='.$pass->reference)
+            ->assertRedirect(route('search', ['q' => 'gynaecologist', 'tab' => 'services']))->assertSessionHas('status');
+        $this->get('/search?q=gynaecologist')->assertSee('Dansoman Family Clinic');
+        $this->get('/facilities/f-legon')->assertSee('+233200000001');
+    }
+
+    public function test_members_see_their_plans_on_their_account_page(): void
+    {
+        $this->get('/account')->assertRedirect(route('login'));
+
+        $user = $this->memberWith(AccessPlan::UNLIMITED, null)->fresh();
+        AccessPass::where('user_id', $user->id)->update(['plan_name' => 'Full week']);
+        AccessPass::create([
+            'user_id' => $user->id, 'plan_name' => 'Old day pass', 'kind' => AccessPlan::UNLIMITED, 'duration_hours' => 24,
+            'amount' => 2000, 'currency' => 'GHS', 'reference' => 'CS-OLD', 'status' => 'paid',
+            'paid_at' => now()->subDays(3), 'expires_at' => now()->subDays(2),
+        ]);
+        AccessPass::create([
+            'user_id' => User::factory()->create()->id, 'plan_name' => 'Someone else’s plan', 'kind' => AccessPlan::UNLIMITED, 'duration_hours' => 24,
+            'amount' => 2000, 'currency' => 'GHS', 'reference' => 'CS-OTHER', 'status' => 'paid', 'paid_at' => now(), 'expires_at' => now()->addDay(),
+        ]);
+
+        $this->actingAs($user)->get('/account')
+            ->assertOk()
+            ->assertSee($user->email)
+            ->assertSeeInOrder(['Your plan', 'Full week', 'Opens: Everything', 'Past plans', 'Old day pass'])
+            ->assertDontSee('Someone else’s plan', false);
+        $this->get('/plans')->assertSee(route('account'));
+
+        $this->actingAs(User::factory()->create()->fresh())->get('/account')->assertOk()->assertSee('You don’t have a plan yet', false);
+    }
+
+    public function test_members_choosing_a_pass_go_straight_to_payment(): void
+    {
+        $plan = AccessPlan::where('name', 'Full day')->firstOrFail();
+        $this->actingAs(User::factory()->create());
+
+        $this->post('/search/access', ['plan' => $plan->id, 'q' => 'gynaecologist', 'tab' => 'services'])
+            ->assertRedirect(route('search.checkout', ['plan' => $plan, 'q' => 'gynaecologist', 'tab' => 'services']));
+        $this->get(route('search.checkout', ['plan' => $plan, 'tab' => 'services']))->assertSessionHasErrors('unlock');
     }
 }

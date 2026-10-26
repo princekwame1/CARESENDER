@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\Api\V1\GeoController;
 use App\Http\Controllers\Auth\LoginController;
@@ -20,6 +21,9 @@ Route::get('/map/markers', [GeoController::class, 'markers'])->middleware('cache
 Route::post('/search/unlock', [SearchController::class, 'unlock'])->middleware(['auth', 'throttle:login'])->name('search.unlock');
 // Single searches can be bought without an account.
 Route::post('/search/buy', [SearchController::class, 'buy'])->middleware('throttle:auth')->name('search.buy');
+// Choosing an access option on a locked search: single searches pay straight away, other plans need an account first.
+Route::post('/search/access', [SearchController::class, 'access'])->middleware('throttle:auth')->name('search.access');
+Route::get('/search/checkout/{plan}', [SearchController::class, 'checkout'])->middleware(['auth', 'throttle:auth'])->name('search.checkout');
 Route::get('/search/paid', [SearchController::class, 'paid'])->name('search.paid');
 Route::get('/facilities/{facility}', [FacilityController::class, 'show'])->name('facilities.show');
 Route::view('/how-we-verify', 'verify')->name('verify');
@@ -36,6 +40,7 @@ Route::view('/payments/done', 'payments-done')->name('payments.done');
 
 Route::get('/plans', [PlanController::class, 'index'])->name('plans');
 Route::middleware('auth')->group(function () {
+    Route::get('/account', [AccountController::class, 'show'])->name('account');
     Route::post('/plans/{plan}/checkout', [PlanController::class, 'checkout'])->middleware('throttle:auth')->name('plans.checkout');
     Route::get('/plans/confirm', [PlanController::class, 'confirm'])->name('plans.confirm');
 });
