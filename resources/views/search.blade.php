@@ -13,10 +13,12 @@
     <div class="container-page py-8">
         <a href="{{ route('home') }}" class="btn-ghost -ml-3 !px-3"><x-icon name="back" />Back to home</a>
 
-        <form action="{{ route('search') }}" method="GET" data-autosubmit class="mt-3">
+        {{-- The search form only wraps the header and filters, so the results column can hold its own forms (access options). --}}
+        <div class="mt-3 grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[17rem_minmax(0,1fr)] xl:grid-cols-[19rem_minmax(0,1fr)]">
+        <form action="{{ route('search') }}" method="GET" data-autosubmit class="contents">
             {{-- Title + search --}}
             @php($headerImage = \App\Support\SpecialtyPhoto::for($filters->q, $filters->type))
-            <div class="relative overflow-hidden rounded-[2rem] bg-panel px-6 py-8 sm:px-10 sm:py-10 lg:pr-[38%]">
+            <div class="relative overflow-hidden rounded-[2rem] bg-panel px-6 py-8 sm:px-10 sm:py-10 lg:col-span-2 lg:pr-[38%]">
                 <x-photo :image="$headerImage" class="!absolute inset-y-0 right-0 hidden w-[34%] lg:block [mask-image:linear-gradient(90deg,transparent,black_30%)]" sizes="34vw" />
                 <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgb(7_104_159/.12)_1px,transparent_0)] [background-size:22px_22px] [mask-image:linear-gradient(100deg,transparent_40%,black)]"></div>
                 <div class="relative">
@@ -46,7 +48,6 @@
                 </div>
             </div>
 
-            <div class="mt-8 grid gap-8 lg:grid-cols-[17rem_1fr] xl:grid-cols-[19rem_1fr]">
                 {{-- Filters: sticky sidebar on desktop, collapsible on phones --}}
                 <aside class="lg:sticky lg:top-28 lg:self-start">
                     <details class="card group p-0" data-filters @if ($active) open @endif>
@@ -95,6 +96,8 @@
                         </div>
                     </details>
                 </aside>
+            <input type="hidden" name="tab" value="{{ $tab }}">
+        </form>
 
                 <div class="min-w-0">
                     {{-- Summary --}}
@@ -151,8 +154,6 @@
                         <div class="mt-10">{{ $results->onEachSide(1)->links() }}</div>
                     @endif
                 </div>
-            </div>
-            <input type="hidden" name="tab" value="{{ $tab }}">
-        </form>
+        </div>
     </div>
 </x-layouts.app>

@@ -175,7 +175,9 @@ class SubscriptionWebTest extends DirectoryTestCase
             'api.paystack.co/transaction/verify/*' => Http::response(['status' => true, 'data' => ['status' => 'success', 'amount' => $plan->total(), 'currency' => 'GHS']]),
         ]);
 
-        $this->get('/search?q=gynaecologist')->assertSee('View findings')->assertSee('Single search access')->assertSee('No account needed');
+        $this->get('/search?q=gynaecologist')->assertSee('View findings')->assertSee('Single search access')->assertSee('No account needed')
+            // The access form must not sit inside the search form: browsers drop nested forms, so paying would just re-run the search.
+            ->assertSeeInOrder(['data-autosubmit', '</form>', 'action="'.route('search.access').'"'], false);
         $this->post('/search/access', ['plan' => $plan->id, 'q' => 'gynaecologist', 'tab' => 'services'])->assertSessionHasErrors('email');
 
         $response = $this->post('/search/access', ['plan' => $plan->id, 'q' => 'gynaecologist', 'tab' => 'services', 'email' => 'guest@example.com'])

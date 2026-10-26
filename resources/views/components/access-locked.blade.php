@@ -28,11 +28,11 @@
 
     @if ($hasOptions)
         <details class="group/findings w-full max-w-lg" @if ($errors->any()) open @endif>
-            <summary class="btn-primary mx-auto w-fit cursor-pointer list-none justify-center group-open/findings:hidden [&::-webkit-details-marker]:hidden">
+            <summary class="btn-primary mx-auto w-fit cursor-pointer list-none justify-center group-open/findings:hidden! [&::-webkit-details-marker]:hidden">
                 View findings <x-icon name="arrow" class="size-4" />
             </summary>
 
-            <form method="POST" action="{{ route('search.access') }}" class="group grid gap-3 text-left">
+            <form method="POST" action="{{ route('search.access') }}" class="group mt-2 flex flex-col gap-5 text-left">
                 @csrf
                 @foreach ($unlock as $name => $value)
                     <input type="hidden" name="{{ $name }}" value="{{ $value }}">
@@ -42,7 +42,7 @@
                     <p class="text-xs text-muted">Pay once for this search, or get a pass for as many searches as you like.</p>
                 </div>
 
-                <fieldset class="grid gap-2">
+                <fieldset class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0">
                     <legend class="sr-only">Access option</legend>
                     @if ($singleSearch)
                         <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-surface-2 px-4 py-3 text-sm ring-1 ring-transparent transition hover:ring-brand/40 has-[:checked]:bg-brand-soft has-[:checked]:ring-brand">
