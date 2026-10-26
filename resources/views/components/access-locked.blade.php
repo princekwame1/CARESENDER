@@ -49,22 +49,18 @@
                     @if ($singleSearch)
                         <div class="rounded-2xl bg-surface-2 text-sm ring-1 ring-transparent transition hover:ring-brand/40 has-[:checked]:bg-brand-soft has-[:checked]:ring-brand">
                             <label class="flex cursor-pointer items-center gap-3 px-4 py-3">
-                                <input id="access-single" type="radio" name="plan" value="{{ $singleSearch->id }}" data-submit-label="Pay {{ $money($singleSearch->total()) }} with Paystack" class="accent-brand" @checked($singleChecked)>
+                                <input id="access-single" type="radio" name="plan" value="{{ $singleSearch->id }}" data-submit-label="Pay with Paystack" class="accent-brand" @checked($singleChecked)>
                                 <x-icon name="search" class="size-5 shrink-0 text-brand" />
                                 <span class="flex-1"><span class="block font-semibold">Single search access</span><span class="block text-xs text-muted">Just these results. No account needed.</span></span>
                                 <span class="shrink-0 font-semibold tabular-nums">{{ $money($singleSearch->price) }}</span>
                             </label>
-                            <div class="grid gap-1.5 border-t border-line px-4 py-3">
-                                @guest
+                            @guest
+                                <div class="grid gap-1.5 border-t border-line px-4 py-3">
                                     <label for="single-search-email" class="text-xs font-semibold">Your email for the Paystack receipt</label>
                                     <input id="single-search-email" type="email" name="email" value="{{ old('email') }}" data-selects="#access-single" autocomplete="email" autocapitalize="none" maxlength="190" placeholder="you@example.com" class="field">
                                     @error('email')<p class="text-xs text-danger">{{ $message }}</p>@enderror
-                                @endguest
-                                <p class="text-xs text-muted">
-                                    You pay {{ $money($singleSearch->total()) }}@if ($singleSearch->fee() > 0), including a {{ $money($singleSearch->fee()) }} Paystack fee @endif.
-                                    The results stay open for {{ \App\Models\AccessPlan::durationLabel(\App\Support\PaymentSettings::unlockHours()) }}@guest in this browser @endguest.
-                                </p>
-                            </div>
+                                </div>
+                            @endguest
                         </div>
                     @endif
                     @foreach ($multiplePlans as $plan)
@@ -80,7 +76,7 @@
                     @endforeach
                 </fieldset>
 
-                <button class="btn-primary justify-center" data-submit-label-target>{{ $singleChecked ? 'Pay '.$money($singleSearch->total()).' with Paystack' : $planLabel }}</button>
+                <button class="btn-primary justify-center" data-submit-label-target>{{ $singleChecked ? 'Pay with Paystack' : $planLabel }}</button>
                 @guest
                     <p class="text-center text-xs text-muted">Already have an account? <a href="{{ route('login', ['back' => $back]) }}" class="font-semibold text-brand underline">Sign in</a></p>
                 @endguest

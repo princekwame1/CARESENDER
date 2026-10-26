@@ -154,7 +154,7 @@ class SubscriptionWebTest extends DirectoryTestCase
         $this->post("/plans/{$plan->id}/checkout")->assertRedirect(route('login'));
 
         $user = User::factory()->create();
-        $this->actingAs($user)->get('/plans')->assertSee('+ GHS 1.20 Paystack fee')->assertSee('Pay GHS 61.20');
+        $this->actingAs($user)->get('/plans')->assertSee('GHS 60.00')->assertSee('Pay with Paystack')->assertDontSee('Paystack fee')->assertDontSee('GHS 61.20');
         $this->post("/plans/{$plan->id}/checkout")->assertRedirect('https://checkout.paystack.com/web');
         Http::assertSent(fn ($r) => str_contains($r->url(), 'initialize') && $r['callback_url'] === route('plans.confirm'));
 
@@ -176,7 +176,7 @@ class SubscriptionWebTest extends DirectoryTestCase
         ]);
 
         $this->get('/search?q=gynaecologist')->assertSee('View findings')->assertSee('Single search access')->assertSee('No account needed')
-            ->assertSee('name="email"', false)->assertSee('Pay GHS '.number_format($plan->total() / 100, 2).' with Paystack')
+            ->assertSee('name="email"', false)->assertSee('Pay with Paystack')->assertDontSee('Paystack fee')->assertDontSee('stay open for')
             // The access form must not sit inside the search form: browsers drop nested forms, so paying would just re-run the search.
             ->assertSeeInOrder(['data-autosubmit', '</form>', 'action="'.route('search.access').'"'], false);
         $this->post('/search/access', ['plan' => $plan->id, 'q' => 'gynaecologist', 'tab' => 'services'])->assertSessionHasErrors('email');
