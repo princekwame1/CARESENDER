@@ -66,11 +66,24 @@ class SubscriptionWebTest extends DirectoryTestCase
         $user = $this->memberWith(AccessPlan::SEARCHES, null, searches: 2);
         $this->actingAs($user);
 
-        $this->get('/search?q=gynaecologist')->assertSee('Use 1 of your 2 searches');
-        $this->post('/search/unlock', ['q' => 'gynaecologist', 'tab' => 'services'])->assertRedirect()->assertSessionHasNoErrors();
+        $searchesLeft = fn () => AccessPass::where('user_id', $user->id)->value('searches_left');
 
-        $this->get('/search?q=gynaecologist')->assertSee('Dansoman Family Clinic')->assertSee('Dr. Ama Mensah');
-        $this->assertSame(1, AccessPass::where('user_id', $user->id)->value('searches_left'));
+        // Searching opens the results straight away with one credit.
+        $this->get('/search?q=gynaecologist')
+            ->assertSee('Dansoman Family Clinic')->assertSee('Dr. Ama Mensah')
+            ->assertSee('Used 1 search from your plan')->assertDontSee('Use 1 of your')->assertDontSee('for members with a plan');
+        $this->assertSame(1, $searchesLeft());
+
+        // The same term with other filters, on the other tab, or again later is free.
+        $this->get('/search?q=Gynaecologist&city=Accra')->assertDontSee('Used 1 search from your plan');
+        $this->get('/search?q=gynaecologist&tab=facilities')->assertDontSee('Used 1 search from your plan');
+        $this->get('/search?q=gynaecologist')->assertSee('Dansoman Family Clinic')->assertDontSee('Used 1 search from your plan');
+        $this->assertSame(1, $searchesLeft());
+
+        // A new term uses the next credit; with none left, results stay locked.
+        $this->get('/search?q=legon')->assertSee('Used 1 search from your plan');
+        $this->assertSame(0, $searchesLeft());
+        $this->get('/search?q=dansoman')->assertSee('match this search')->assertDontSee('Dr. Ama Mensah');
     }
 
     public function test_closest_to_you_and_the_map_hide_names_and_locations_without_a_plan(): void
@@ -259,7 +272,6 @@ class SubscriptionWebTest extends DirectoryTestCase
         $this->actingAs($this->memberWith(AccessPlan::SEARCHES, null, 5));
 
         $this->get('/search')->assertSee('You have 5 searches left on your plan.')->assertDontSee('Choose a plan');
-        $this->get('/search?q=gynaecologist')->assertSee('Use 1 of your 5 searches to open these results');
     }
 
     public function test_members_choosing_a_pass_go_straight_to_payment(): void

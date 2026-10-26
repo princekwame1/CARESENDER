@@ -227,8 +227,35 @@ class AccessGate
         return $unlock;
     }
 
+    /**
+     * Opens a member's search as soon as they run it on the website. The first search for a term uses one credit;
+     * changing filters or tabs for that term is free while it stays open.
+     *
+     * @return ?SearchUnlock null when the search has no term or the member has no searches left that cover it
+     */
+    public function openForMember(User $user, SearchFilters $filters): ?SearchUnlock
+    {
+        if (! filled($filters->q)) {
+            return null;
+        }
+        $needed = self::areasForSearch($filters);
+
+        $opened = SearchUnlock::where('user_id', $user->id)->where('expires_at', '>', now())
+            ->whereRaw('lower(query) = ?', [mb_strtolower(mb_substr($filters->q, 0, 120))])
+            ->whereNotNull('access_pass_id')->with('accessPass')->latest('expires_at')->get()
+            ->first(fn ($unlock) => $unlock->accessPass && array_intersect($needed, $unlock->accessPass->coveredAreas()));
+        if ($opened) {
+            $unlock = $this->openSearch($opened->accessPass, $filters, $opened->expires_at);
+            $this->grants = [];
+
+            return $unlock;
+        }
+
+        return $this->unlockSearch($user, $filters);
+    }
+
     /** Opens a search's result facilities for the pass owner, for the areas the pass covers. */
-    private function openSearch(AccessPass $pass, SearchFilters $filters): SearchUnlock
+    private function openSearch(AccessPass $pass, SearchFilters $filters, ?Carbon $expiresAt = null): SearchUnlock
     {
         return SearchUnlock::create([
             'user_id' => $pass->user_id,
@@ -238,7 +265,7 @@ class AccessGate
             'query' => $filters->q ? mb_substr($filters->q, 0, 120) : null,
             'facility_ids' => $this->search->facilityIds($filters),
             'areas' => $pass->coveredAreas(),
-            'expires_at' => now()->addHours(PaymentSettings::unlockHours()),
+            'expires_at' => $expiresAt ?? now()->addHours(PaymentSettings::unlockHours()),
         ]);
     }
 

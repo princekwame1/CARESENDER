@@ -32,6 +32,16 @@ class SearchController extends Controller
         // Counts are always public; the list only shows when the viewer's plan opens part of it.
         $access = $gate->forSearch($request, self::tabFilters($filters, $tab));
         $locked = ! in_array(true, $access['areas'], true);
+
+        // Members with search credits see results straight away: searching opens the search.
+        $searchesUsed = 0;
+        $user = $request->user();
+        if ($locked && $user && ($access['searches_left'] ?? 0) > 0 && $gate->openForMember($user, self::tabFilters($filters, $tab))) {
+            $searchesBefore = $access['searches_left'];
+            $access = $gate->forSearch($request, self::tabFilters($filters, $tab));
+            $locked = ! in_array(true, $access['areas'], true);
+            $searchesUsed = $searchesBefore - $access['searches_left'];
+        }
         $neededAreas = AccessGate::areasForSearch(self::tabFilters($filters, $tab));
 
         $results = null;
@@ -51,6 +61,7 @@ class SearchController extends Controller
             'results' => $results,
             'access' => $access,
             'locked' => $locked,
+            'searchesUsed' => $searchesUsed,
             'plans' => $locked ? self::plansFor($neededAreas) : collect(),
             'lockedAreas' => implode(' or ', array_map(fn ($area) => mb_strtolower(AccessPlan::AREAS[$area]), $neededAreas)),
             // One search credit opens a search that has a query (otherwise it would open the whole directory).
