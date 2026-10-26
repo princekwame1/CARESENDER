@@ -35,7 +35,7 @@ class SubscriptionWebTest extends DirectoryTestCase
         $this->get('/search?q=gynaecologist')
             ->assertOk()
             ->assertSee('2 listings match this search')
-            ->assertSee('Create an account')
+            ->assertSee('View findings')
             ->assertDontSee('Legon Test Hospital')
             ->assertDontSee('+233200000001');
 
@@ -222,7 +222,7 @@ class SubscriptionWebTest extends DirectoryTestCase
         ]);
         $checkout = route('search.checkout', ['plan' => $plan, 'q' => 'gynaecologist', 'tab' => 'services'], absolute: false);
 
-        $this->get('/search?q=gynaecologist')->assertSee('Full week')->assertSee('Create an account to continue');
+        $this->get('/search?q=gynaecologist')->assertSee('Full week')->assertSee('data-submit-label="Sign up for Full week"', false)->assertSee('Pay with Paystack');
         $this->post('/search/access', ['plan' => $plan->id, 'q' => 'gynaecologist', 'tab' => 'services'])
             ->assertRedirect(route('register', ['back' => $checkout]));
 

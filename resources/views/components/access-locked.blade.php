@@ -10,7 +10,8 @@
     $hasOptions = $unlock && ($singleSearch || $multiplePlans->isNotEmpty());
     $money = fn (int $pesewas) => $currency.' '.number_format($pesewas / 100, 2);
     $singleChecked = $singleSearch && (old('plan') === null || old('plan') == $singleSearch->id);
-    $planLabel = auth()->check() ? 'Continue to payment' : 'Create an account to continue';
+    $planLabel = fn (\App\Models\AccessPlan $plan) => auth()->check() ? "Buy {$plan->name}" : "Sign up for {$plan->name}";
+    $checkedPlan = $singleChecked ? null : ($multiplePlans->firstWhere('id', old('plan')) ?? $multiplePlans->first());
 @endphp
 <div {{ $attributes->merge(['class' => 'card flex flex-col items-center gap-4 p-8 text-center sm:p-10']) }}>
     <span class="icon-tile"><x-icon name="list" /></span>
@@ -65,7 +66,7 @@
                     @endif
                     @foreach ($multiplePlans as $plan)
                         <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-surface-2 px-4 py-3 text-sm ring-1 ring-transparent transition hover:ring-brand/40 has-[:checked]:bg-brand-soft has-[:checked]:ring-brand">
-                            <input type="radio" name="plan" value="{{ $plan->id }}" data-submit-label="{{ $planLabel }}" class="accent-brand" @checked(! $singleChecked && old('plan', $multiplePlans->first()->id) == $plan->id)>
+                            <input type="radio" name="plan" value="{{ $plan->id }}" data-submit-label="{{ $planLabel($plan) }}" class="accent-brand" @checked($checkedPlan?->is($plan))>
                             <x-icon name="clock" class="size-5 shrink-0 text-brand" />
                             <span class="flex-1">
                                 <span class="block font-semibold">{{ $plan->name }}</span>
@@ -76,7 +77,7 @@
                     @endforeach
                 </fieldset>
 
-                <button class="btn-primary justify-center" data-submit-label-target>{{ $singleChecked ? 'Pay with Paystack' : $planLabel }}</button>
+                <button class="btn-primary justify-center" data-submit-label-target>{{ $checkedPlan ? $planLabel($checkedPlan) : 'Pay with Paystack' }}</button>
                 @guest
                     <p class="text-center text-xs text-muted">Already have an account? <a href="{{ route('login', ['back' => $back]) }}" class="font-semibold text-brand underline">Sign in</a></p>
                 @endguest
