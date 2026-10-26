@@ -228,8 +228,8 @@ class AccessGate
     }
 
     /**
-     * Opens a member's search as soon as they run it on the website. The first search for a term uses one credit;
-     * changing filters or tabs for that term is free while it stays open.
+     * Opens a member's search as soon as they run it on the website. Every new search (term and filters) uses one
+     * credit; one credit opens both result tabs, and coming back to a search that is still open is free.
      *
      * @return ?SearchUnlock null when the search has no term or the member has no searches left that cover it
      */
@@ -238,20 +238,18 @@ class AccessGate
         if (! filled($filters->q)) {
             return null;
         }
-        $needed = self::areasForSearch($filters);
 
-        $opened = SearchUnlock::where('user_id', $user->id)->where('expires_at', '>', now())
-            ->whereRaw('lower(query) = ?', [mb_strtolower(mb_substr($filters->q, 0, 120))])
-            ->whereNotNull('access_pass_id')->with('accessPass')->latest('expires_at')->get()
-            ->first(fn ($unlock) => $unlock->accessPass && array_intersect($needed, $unlock->accessPass->coveredAreas()));
-        if ($opened) {
-            $unlock = $this->openSearch($opened->accessPass, $filters, $opened->expires_at);
+        $unlock = $this->unlockSearch($user, $filters);
+        if ($unlock?->accessPass && $filters->type !== 'facility') {
+            $facilities = $filters->with(['type' => 'facility']);
+            $alreadyOpen = SearchUnlock::where('user_id', $user->id)->where('signature', $facilities->signature())->where('expires_at', '>', now())->exists();
+            if (! $alreadyOpen) {
+                $this->openSearch($unlock->accessPass, $facilities, $unlock->expires_at);
+            }
             $this->grants = [];
-
-            return $unlock;
         }
 
-        return $this->unlockSearch($user, $filters);
+        return $unlock;
     }
 
     /** Opens a search's result facilities for the pass owner, for the areas the pass covers. */

@@ -74,16 +74,15 @@ class SubscriptionWebTest extends DirectoryTestCase
             ->assertSee('Used 1 search from your plan')->assertDontSee('Use 1 of your')->assertDontSee('for members with a plan');
         $this->assertSame(1, $searchesLeft());
 
-        // The same term with other filters, on the other tab, or again later is free.
-        $this->get('/search?q=Gynaecologist&city=Accra')->assertDontSee('Used 1 search from your plan');
-        $this->get('/search?q=gynaecologist&tab=facilities')->assertDontSee('Used 1 search from your plan');
+        // Reloading the open search or switching to its facilities tab is free.
         $this->get('/search?q=gynaecologist')->assertSee('Dansoman Family Clinic')->assertDontSee('Used 1 search from your plan');
+        $this->get('/search?q=gynaecologist&tab=facilities')->assertDontSee('Used 1 search from your plan')->assertDontSee('match this search');
         $this->assertSame(1, $searchesLeft());
 
-        // A new term uses the next credit; with none left, results stay locked.
-        $this->get('/search?q=legon')->assertSee('Used 1 search from your plan');
+        // Every new search counts, even the same term with other filters; with none left, results stay locked.
+        $this->get('/search?q=gynaecologist&city=Accra')->assertSee('Used 1 search from your plan');
         $this->assertSame(0, $searchesLeft());
-        $this->get('/search?q=dansoman')->assertSee('match this search')->assertDontSee('Dr. Ama Mensah');
+        $this->get('/search?q=legon')->assertSee('match this search')->assertDontSee('Legon Test Hospital');
     }
 
     public function test_closest_to_you_and_the_map_hide_names_and_locations_without_a_plan(): void

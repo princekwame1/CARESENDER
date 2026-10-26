@@ -142,7 +142,7 @@
                         </div>
                     @else
                         @if ($searchesUsed > 0)
-                            <p class="mt-5 flex items-start gap-3 rounded-2xl bg-brand-soft px-4 py-3 text-sm text-brand"><x-icon name="check" class="mt-0.5 size-4 shrink-0" />Used 1 search from your plan to open these results. You have {{ $access['searches_left'] }} {{ Str::plural('search', $access['searches_left']) }} left. Changing filters for this search is free.</p>
+                            <p class="mt-5 flex items-start gap-3 rounded-2xl bg-brand-soft px-4 py-3 text-sm text-brand"><x-icon name="check" class="mt-0.5 size-4 shrink-0" />Used 1 search from your plan to open these results. You have {{ $access['searches_left'] }} {{ Str::plural('search', $access['searches_left']) }} left.</p>
                         @endif
                         <p class="mt-5 text-sm text-muted">Showing {{ number_format($results->firstItem()) }} to {{ number_format($results->lastItem()) }} of {{ number_format($total) }}</p>
                         <div data-stagger @class(['mt-4 grid gap-4', 'sm:grid-cols-2 xl:grid-cols-3' => true])>
