@@ -1,0 +1,15 @@
+{
+  "collectedAt": "2026-09-21",
+  "facilities": [
+    {"id": "f-legon", "name": "Legon Test Hospital", "city": "Accra", "area": "East Legon", "address": "1 Boundary Rd, East Legon", "phone": "+233200000001", "whatsapp": null, "source": "https://example.test/a", "hours": "", "issue": "", "verifiedAt": null, "collectedAt": "2026-09-21", "diagnosticCategories": ["laboratory"], "facilityType": "Primary Hospital"},
+    {"id": "f-tema", "name": "Tema Harbour Clinic", "city": "Tema", "area": "Tema Community 25", "address": "Community 25", "phone": null, "whatsapp": null, "source": "https://example.test/b", "hours": "", "issue": "", "verifiedAt": null, "collectedAt": "2026-09-21", "diagnosticCategories": ["imaging"], "facilityType": "Clinic"},
+    {"id": "f-dansoman", "name": "Dansoman Family Clinic", "city": "Accra", "area": "Dansoman", "address": "Dansoman Last Stop", "phone": "+233200000003", "whatsapp": "+233200000003", "source": "https://example.test/c", "hours": "", "issue": "", "verifiedAt": null, "collectedAt": "2026-09-21", "diagnosticCategories": [], "facilityType": "clinic"}
+  ],
+  "records": [
+    {"id": "s-fbc-legon", "facilityId": "f-legon", "facility": "Legon Test Hospital", "type": "test", "service": "Full Blood Count", "name": "", "labCategory": "Haematology", "schedule": "", "days": [], "price": null, "gender": null, "diagnosticCategories": ["laboratory"], "managerConfirmed": true, "confirmationReportedAt": "2026-09-22", "source": "x", "city": "Accra", "area": "East Legon"},
+    {"id": "s-gyn-legon", "facilityId": "f-legon", "facility": "Legon Test Hospital", "type": "specialist", "service": "Gynaecologist", "name": "Dr. Ama Mensah", "schedule": "", "days": ["Tuesday"], "price": null, "gender": null, "diagnosticCategories": [], "source": "x", "city": "Accra", "area": "East Legon"},
+    {"id": "s-us-tema", "facilityId": "f-tema", "facility": "Tema Harbour Clinic", "type": "test", "service": "Ultrasound", "name": "", "schedule": "", "days": [], "price": null, "gender": null, "diagnosticCategories": ["imaging"], "source": "x", "city": "Tema", "area": "Tema Community 25"},
+    {"id": "s-gyn-dansoman", "facilityId": "f-dansoman", "facility": "Dansoman Family Clinic", "type": "specialist", "service": "Gynaecologist", "name": "", "schedule": "", "days": ["Monday"], "price": null, "gender": null, "diagnosticCategories": [], "source": "x", "city": "Accra", "area": "Dansoman"},
+    {"id": "s-facility-row", "facilityId": "f-legon", "facility": "Legon Test Hospital", "type": "facility", "service": "Hospital", "name": "", "schedule": "", "days": [], "price": null, "gender": null, "diagnosticCategories": [], "source": "x", "city": "Accra", "area": "East Legon"}
+  ]
+}

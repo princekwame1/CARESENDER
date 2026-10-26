@@ -1,0 +1,9 @@
+{
+  "name": "CareSenda — Find your way to care",
+  "short_name": "CareSenda",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8f9fb",
+  "theme_color": "#1d4ed8",
+  "icons": [{ "src": "/images/brand/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }]
+}
