@@ -14,6 +14,9 @@ return [
 
     'cache_ttl' => (int) env('CARESENDA_CACHE_TTL', 3600),
 
+    // Where social sign-in started in the mobile app returns to (the app's URL scheme).
+    'app_auth_callback' => env('CARESENDA_APP_AUTH_CALLBACK', 'caresenda://auth'),
+
     'coverage' => [
         // Rough bounding box around Greater Accra; detections outside it fall back to manual choice.
         'bounds' => ['south' => 5.40, 'north' => 5.95, 'west' => -0.55, 'east' => 0.20],

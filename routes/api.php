@@ -38,6 +38,7 @@ Route::prefix('v1')->name('api.v1.')->middleware('throttle:api')->group(function
     Route::prefix('auth')->name('auth.')->middleware('throttle:auth')->group(function () {
         Route::post('register', [V1\AuthController::class, 'register'])->name('register');
         Route::post('login', [V1\AuthController::class, 'login'])->name('login');
+        Route::post('social', [V1\AuthController::class, 'social'])->name('social');
     });
 
     Route::middleware('auth:sanctum')->group(function () {

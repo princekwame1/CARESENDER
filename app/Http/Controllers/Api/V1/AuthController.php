@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\Auth\SocialLoginController;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\PhoneNumber;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -50,6 +52,26 @@ class AuthController extends Controller
         $user = User::where(str_contains($data['email'], '@') ? 'email' : 'username', $data['email'])->first();
         if (! $user || ! Hash::check($data['password'], $user->password)) {
             throw ValidationException::withMessages(['email' => __('auth.failed')]);
+        }
+
+        return $this->tokenResponse($user, $data['device_name']);
+    }
+
+    /** Trades the one-time code from a Google / Facebook / Apple / Microsoft sign-in in the app's browser for a token. */
+    public function social(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'code' => ['required', 'string', 'max:100'],
+            'code_verifier' => ['required', 'string', 'min:43', 'max:128'],
+            'device_name' => ['required', 'string', 'max:120'],
+        ]);
+
+        // Pulled first, so a wrong verifier also uses the code up.
+        $entry = Cache::pull(SocialLoginController::appCodeKey($data['code']));
+        $challenge = rtrim(strtr(base64_encode(hash('sha256', $data['code_verifier'], true)), '+/', '-_'), '=');
+        $user = $entry && hash_equals($entry['challenge'], $challenge) ? User::find($entry['user_id']) : null;
+        if (! $user) {
+            throw ValidationException::withMessages(['code' => 'That sign-in has expired. Please try again.']);
         }
 
         return $this->tokenResponse($user, $data['device_name']);

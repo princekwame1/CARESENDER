@@ -100,6 +100,51 @@ class SocialLoginTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_app_sign_in_hands_a_one_time_code_back_to_the_app(): void
+    {
+        $verifier = str_repeat('v', 64);
+        $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
+        Socialite::fake('google', $this->providerUser('g-1', 'ama@example.com', ['email_verified' => true]));
+
+        $this->get('/auth/google/redirect?app_challenge='.$challenge)->assertRedirect();
+        $location = $this->get('/auth/google/callback')->assertRedirect()->headers->get('Location');
+
+        $this->assertStringStartsWith('caresenda://auth?code=', $location);
+        $this->assertGuest();
+        parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
+
+        $this->postJson('/api/v1/auth/social', ['code' => $query['code'], 'code_verifier' => str_repeat('x', 64), 'device_name' => 'Pixel'])
+            ->assertJsonValidationErrors('code');
+        $this->get('/auth/google/redirect?app_challenge='.$challenge);
+        parse_str((string) parse_url($this->get('/auth/google/callback')->headers->get('Location'), PHP_URL_QUERY), $query);
+
+        $this->postJson('/api/v1/auth/social', ['code' => $query['code'], 'code_verifier' => $verifier, 'device_name' => 'Pixel'])
+            ->assertOk()
+            ->assertJsonPath('data.email', 'ama@example.com')
+            ->assertJsonStructure(['token']);
+        // Each code works once.
+        $this->postJson('/api/v1/auth/social', ['code' => $query['code'], 'code_verifier' => $verifier, 'device_name' => 'Pixel'])
+            ->assertJsonValidationErrors('code');
+        $this->assertDatabaseCount('users', 1);
+    }
+
+    public function test_app_sign_in_problems_go_back_to_the_app(): void
+    {
+        $this->get('/auth/google/redirect?app_challenge='.str_repeat('c', 43));
+
+        $this->get('/auth/google/callback?error=access_denied')
+            ->assertRedirect('caresenda://auth?'.http_build_query(['error' => 'Google sign-in was cancelled.']));
+    }
+
+    public function test_meta_lists_the_providers_for_the_app(): void
+    {
+        $this->getJson('/api/v1/meta')->assertOk()->assertJsonPath('data.social_providers', [
+            ['id' => 'google', 'label' => 'Google'],
+            ['id' => 'apple', 'label' => 'Apple'],
+            ['id' => 'microsoft', 'label' => 'Microsoft'],
+        ]);
+    }
+
     public function test_apple_form_post_is_turned_into_a_get(): void
     {
         $this->post('/auth/apple/callback', ['code' => 'abc', 'state' => 'xyz', 'user' => '{"name":{"firstName":"Ama"}}'])
