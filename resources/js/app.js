@@ -220,6 +220,22 @@ document.addEventListener('click', (e) => {
     $$('[data-map]').forEach((m) => m.classList.toggle('dark-tiles', !isDark));
 });
 
+// Access options: the submit button says what happens next for the chosen option
+document.addEventListener('change', (e) => {
+    const label = e.target.dataset?.submitLabel;
+    const button = label && e.target.form?.querySelector('[data-submit-label-target]');
+    if (button) button.textContent = label;
+});
+
+// Typing an email for a single search picks the single search
+document.addEventListener('focusin', (e) => {
+    const radio = e.target.dataset?.selects && document.querySelector(e.target.dataset.selects);
+    if (radio && !radio.checked) {
+        radio.checked = true;
+        radio.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+});
+
 // Filters submit as soon as they change
 document.addEventListener('change', (e) => {
     const form = e.target.closest('form[data-autosubmit]');

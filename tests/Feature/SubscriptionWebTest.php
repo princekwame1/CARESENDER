@@ -176,6 +176,7 @@ class SubscriptionWebTest extends DirectoryTestCase
         ]);
 
         $this->get('/search?q=gynaecologist')->assertSee('View findings')->assertSee('Single search access')->assertSee('No account needed')
+            ->assertSee('name="email"', false)->assertSee('Pay GHS '.number_format($plan->total() / 100, 2).' with Paystack')
             // The access form must not sit inside the search form: browsers drop nested forms, so paying would just re-run the search.
             ->assertSeeInOrder(['data-autosubmit', '</form>', 'action="'.route('search.access').'"'], false);
         $this->post('/search/access', ['plan' => $plan->id, 'q' => 'gynaecologist', 'tab' => 'services'])->assertSessionHasErrors('email');

@@ -9,6 +9,8 @@
     $multiplePlans = $plans->reject->sellsToGuests()->values();
     $hasOptions = $unlock && ($singleSearch || $multiplePlans->isNotEmpty());
     $money = fn (int $pesewas) => $currency.' '.number_format($pesewas / 100, 2);
+    $singleChecked = $singleSearch && (old('plan') === null || old('plan') == $singleSearch->id);
+    $planLabel = auth()->check() ? 'Continue to payment' : 'Create an account to continue';
 @endphp
 <div {{ $attributes->merge(['class' => 'card flex flex-col items-center gap-4 p-8 text-center sm:p-10']) }}>
     <span class="icon-tile"><x-icon name="list" /></span>
@@ -45,16 +47,29 @@
                 <fieldset class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0">
                     <legend class="sr-only">Access option</legend>
                     @if ($singleSearch)
-                        <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-surface-2 px-4 py-3 text-sm ring-1 ring-transparent transition hover:ring-brand/40 has-[:checked]:bg-brand-soft has-[:checked]:ring-brand">
-                            <input id="access-single" type="radio" name="plan" value="{{ $singleSearch->id }}" class="accent-brand" @checked(old('plan', $singleSearch->id) == $singleSearch->id)>
-                            <x-icon name="search" class="size-5 shrink-0 text-brand" />
-                            <span class="flex-1"><span class="block font-semibold">Single search access</span><span class="block text-xs text-muted">Just these results. No account needed.</span></span>
-                            <span class="shrink-0 font-semibold tabular-nums">{{ $money($singleSearch->price) }}</span>
-                        </label>
+                        <div class="rounded-2xl bg-surface-2 text-sm ring-1 ring-transparent transition hover:ring-brand/40 has-[:checked]:bg-brand-soft has-[:checked]:ring-brand">
+                            <label class="flex cursor-pointer items-center gap-3 px-4 py-3">
+                                <input id="access-single" type="radio" name="plan" value="{{ $singleSearch->id }}" data-submit-label="Pay {{ $money($singleSearch->total()) }} with Paystack" class="accent-brand" @checked($singleChecked)>
+                                <x-icon name="search" class="size-5 shrink-0 text-brand" />
+                                <span class="flex-1"><span class="block font-semibold">Single search access</span><span class="block text-xs text-muted">Just these results. No account needed.</span></span>
+                                <span class="shrink-0 font-semibold tabular-nums">{{ $money($singleSearch->price) }}</span>
+                            </label>
+                            <div class="grid gap-1.5 border-t border-line px-4 py-3">
+                                @guest
+                                    <label for="single-search-email" class="text-xs font-semibold">Your email for the Paystack receipt</label>
+                                    <input id="single-search-email" type="email" name="email" value="{{ old('email') }}" data-selects="#access-single" autocomplete="email" autocapitalize="none" maxlength="190" placeholder="you@example.com" class="field">
+                                    @error('email')<p class="text-xs text-danger">{{ $message }}</p>@enderror
+                                @endguest
+                                <p class="text-xs text-muted">
+                                    You pay {{ $money($singleSearch->total()) }}@if ($singleSearch->fee() > 0), including a {{ $money($singleSearch->fee()) }} Paystack fee @endif.
+                                    The results stay open for {{ \App\Models\AccessPlan::durationLabel(\App\Support\PaymentSettings::unlockHours()) }}@guest in this browser @endguest.
+                                </p>
+                            </div>
+                        </div>
                     @endif
                     @foreach ($multiplePlans as $plan)
                         <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-surface-2 px-4 py-3 text-sm ring-1 ring-transparent transition hover:ring-brand/40 has-[:checked]:bg-brand-soft has-[:checked]:ring-brand">
-                            <input type="radio" name="plan" value="{{ $plan->id }}" class="accent-brand" @checked(old('plan', $singleSearch ? null : $multiplePlans->first()->id) == $plan->id)>
+                            <input type="radio" name="plan" value="{{ $plan->id }}" data-submit-label="{{ $planLabel }}" class="accent-brand" @checked(! $singleChecked && old('plan', $multiplePlans->first()->id) == $plan->id)>
                             <x-icon name="clock" class="size-5 shrink-0 text-brand" />
                             <span class="flex-1">
                                 <span class="block font-semibold">{{ $plan->name }}</span>
@@ -65,24 +80,7 @@
                     @endforeach
                 </fieldset>
 
-                @if ($singleSearch)
-                    @guest
-                        <div class="hidden gap-1.5 group-has-[#access-single:checked]:grid">
-                            <label for="single-search-email" class="text-xs text-muted">Paystack sends your receipt to this email.</label>
-                            <input id="single-search-email" type="email" name="email" value="{{ old('email') }}" autocomplete="email" autocapitalize="none" maxlength="190" placeholder="you@example.com" class="field">
-                            @error('email')<p class="text-xs text-danger">{{ $message }}</p>@enderror
-                        </div>
-                    @endguest
-                    <p class="hidden text-xs text-muted group-has-[#access-single:checked]:block">
-                        You pay {{ $money($singleSearch->total()) }}@if ($singleSearch->fee() > 0), including a {{ $money($singleSearch->fee()) }} Paystack fee @endif.
-                        The results stay open for {{ \App\Models\AccessPlan::durationLabel(\App\Support\PaymentSettings::unlockHours()) }}@guest in this browser @endguest.
-                    </p>
-                @endif
-
-                <button class="btn-primary justify-center">
-                    @if ($singleSearch)<span class="hidden group-has-[#access-single:checked]:inline">Pay with Paystack</span>@endif
-                    <span @class(['group-has-[#access-single:checked]:hidden' => $singleSearch])>@guest Create an account to continue @else Continue to payment @endguest</span>
-                </button>
+                <button class="btn-primary justify-center" data-submit-label-target>{{ $singleChecked ? 'Pay '.$money($singleSearch->total()).' with Paystack' : $planLabel }}</button>
                 @guest
                     <p class="text-center text-xs text-muted">Already have an account? <a href="{{ route('login', ['back' => $back]) }}" class="font-semibold text-brand underline">Sign in</a></p>
                 @endguest
