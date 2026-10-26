@@ -254,6 +254,14 @@ class SubscriptionWebTest extends DirectoryTestCase
         $this->actingAs(User::factory()->create()->fresh())->get('/account')->assertOk()->assertSee('You don’t have a plan yet', false);
     }
 
+    public function test_members_with_search_credits_are_told_to_search_instead_of_buying_again(): void
+    {
+        $this->actingAs($this->memberWith(AccessPlan::SEARCHES, null, 5));
+
+        $this->get('/search')->assertSee('You have 5 searches left on your plan.')->assertDontSee('Choose a plan');
+        $this->get('/search?q=gynaecologist')->assertSee('Use 1 of your 5 searches to open these results');
+    }
+
     public function test_members_choosing_a_pass_go_straight_to_payment(): void
     {
         $plan = AccessPlan::where('name', 'Full day')->firstOrFail();

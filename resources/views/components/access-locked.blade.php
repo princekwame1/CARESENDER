@@ -82,6 +82,13 @@
                 @endguest
             </form>
         </details>
+    @elseif (! $unlock && auth()->check() && $searchesLeft > 0)
+        {{-- Search credits open one search at a time, so browsing everything needs a search term first. --}}
+        <div class="grid w-full max-w-md gap-2 rounded-2xl bg-brand-soft p-4 text-sm">
+            <p class="font-semibold text-brand">You have {{ $searchesLeft }} {{ Str::plural('search', $searchesLeft) }} left on your plan.</p>
+            <p>Type what you’re looking for in the search box above, then use one search to open its results.</p>
+        </div>
+        <a href="{{ route('account') }}" class="btn-secondary">See your plan</a>
     @else
         <div class="flex flex-wrap justify-center gap-3">
             @guest
