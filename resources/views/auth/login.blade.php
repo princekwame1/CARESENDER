@@ -3,10 +3,11 @@
         <form method="POST" action="{{ route('login') }}" class="card w-full max-w-md space-y-6 p-8 sm:p-10">
             @csrf
             <div class="flex flex-col items-center text-center">
-                <img src="/images/brand/favicon.png" alt="" width="64" height="64" class="size-16">
+                <img src="/images/brand/icon-128.webp" alt="" width="64" height="64" class="size-16">
                 <h1 class="mt-5 text-2xl font-bold">Sign in</h1>
                 <p class="mt-1 text-sm text-muted">Members and the CareSenda team</p>
             </div>
+            <x-social-sign-in />
             <label class="block"><span class="label">Username or email</span>
                 <input name="login" type="text" value="{{ old('login') }}" required autofocus autocomplete="username" autocapitalize="none" class="field">
             </label>

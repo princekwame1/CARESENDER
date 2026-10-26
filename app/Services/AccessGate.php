@@ -224,11 +224,12 @@ class AccessGate
             'searches_total' => $plan->isUnlimited() ? null : $plan->searches,
             'duration_hours' => $plan->duration_hours,
             'amount' => $plan->price,
+            'fee' => $plan->fee(),
             'currency' => PaymentSettings::currency(),
             'reference' => 'CS-'.Str::upper(Str::random(16)),
         ]);
 
-        $checkout = $this->paystack->initialize($user->email, $pass->amount, $pass->currency, $pass->reference, [
+        $checkout = $this->paystack->initialize($user->email, $pass->total(), $pass->currency, $pass->reference, [
             'plan' => $plan->name,
             'user_id' => $user->id,
         ], $callbackUrl);
@@ -248,7 +249,7 @@ class AccessGate
 
     /**
      * Records a Paystack transaction result (from verify or the webhook). Idempotent: a pass
-     * is activated once, and only when the amount and currency match what was charged.
+     * is activated once, and only when the amount (price plus fee) and currency match what was charged.
      */
     public function apply(string $reference, array $transaction): void
     {
@@ -260,7 +261,7 @@ class AccessGate
 
             $status = $transaction['status'] ?? null;
             if ($status === 'success'
-                && (int) ($transaction['amount'] ?? 0) >= $pass->amount
+                && (int) ($transaction['amount'] ?? 0) >= $pass->total()
                 && strtoupper((string) ($transaction['currency'] ?? '')) === $pass->currency) {
                 $paidAt = now();
                 $start = $paidAt;

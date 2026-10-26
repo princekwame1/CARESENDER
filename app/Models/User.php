@@ -49,4 +49,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(SearchLog::class);
     }
+
+    public function socialAccounts(): HasMany
+    {
+        return $this->hasMany(SocialAccount::class);
+    }
 }

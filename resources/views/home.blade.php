@@ -49,7 +49,7 @@
                          width="{{ $hero['width'] }}" height="{{ $hero['height'] }}" fetchpriority="high" decoding="async"
                          alt="{{ $hero['alt'] }}"
                          class="relative aspect-square w-full rounded-full object-cover object-[55%_center] ring-8 ring-surface">
-                    @unless ($hero['custom'])<figcaption class="sr-only">AI-generated concept image</figcaption>@endunless
+                    @if ($hero['credit'])<figcaption class="absolute bottom-0 right-0 text-[10px] text-muted"><a href="{{ $hero['credit']['source'] }}" target="_blank" rel="noopener" class="hover:underline">Photo: {{ $hero['credit']['creator'] }}, {{ $hero['credit']['license'] }}</a></figcaption>@endif
 
                     <div class="card float-slow absolute -left-4 top-6 flex items-center gap-4 !rounded-2xl p-3 sm:-left-10">
                         <span class="grid size-11 place-items-center rounded-2xl bg-brand text-brand-ink"><x-icon name="pin" class="size-5" /></span>

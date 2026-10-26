@@ -37,7 +37,7 @@
     <aside data-admin-sidebar class="admin-sidebar fixed inset-y-0 left-0 z-50 flex w-72 -translate-x-full flex-col border-r border-line bg-surface transition-[transform,width] duration-300 lg:sticky lg:top-0 lg:h-dvh lg:w-auto lg:translate-x-0" aria-label="Dashboard">
         <div class="flex h-16 items-center justify-between gap-3 px-5 lg:h-20">
             <a href="{{ route('admin.dashboard') }}" class="flex min-w-0 items-center gap-3">
-                @if ($logo = \App\Support\Branding::logoUrl())<img src="{{ $logo }}" alt="" class="size-9 shrink-0 rounded-md object-contain">@else<img src="/images/brand/favicon.png" alt="" class="size-9 shrink-0 object-contain">@endif
+                @if ($logo = \App\Support\Branding::logoUrl())<img src="{{ $logo }}" alt="" class="size-9 shrink-0 rounded-md object-contain">@else<img src="/images/brand/icon-128.webp" alt="" width="36" height="36" class="size-9 shrink-0 object-contain">@endif
                 <span class="sidebar-text min-w-0 leading-tight"><span class="block truncate font-display text-[15px] font-semibold text-ink">{{ \App\Support\Branding::name() }}</span><span class="block text-xs text-muted">Team dashboard</span></span>
             </a>
             <button type="button" data-admin-close class="btn-ghost !p-2 lg:hidden" aria-label="Close menu"><x-icon name="x" /></button>

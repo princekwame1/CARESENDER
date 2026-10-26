@@ -8,10 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /** One purchase of an access plan. Plan details are copied in so later plan edits don't change it. */
-#[Fillable(['user_id', 'access_plan_id', 'plan_name', 'kind', 'period', 'period_count', 'areas', 'searches_total', 'searches_left', 'duration_hours', 'amount', 'currency', 'reference', 'status', 'channel', 'paid_at', 'expires_at'])]
+#[Fillable(['user_id', 'access_plan_id', 'plan_name', 'kind', 'period', 'period_count', 'areas', 'searches_total', 'searches_left', 'duration_hours', 'amount', 'fee', 'currency', 'reference', 'status', 'channel', 'paid_at', 'expires_at'])]
 class AccessPass extends Model
 {
-    protected $attributes = ['status' => 'pending', 'channel' => null, 'paid_at' => null, 'expires_at' => null, 'areas' => null, 'period' => null, 'period_count' => null];
+    protected $attributes = ['status' => 'pending', 'channel' => null, 'paid_at' => null, 'expires_at' => null, 'fee' => 0, 'areas' => null, 'period' => null, 'period_count' => null];
 
     protected function casts(): array
     {
@@ -22,6 +22,7 @@ class AccessPass extends Model
             'searches_left' => 'integer',
             'duration_hours' => 'integer',
             'amount' => 'integer',
+            'fee' => 'integer',
             'paid_at' => 'datetime',
             'expires_at' => 'datetime',
         ];
@@ -37,6 +38,12 @@ class AccessPass extends Model
     {
         $query->where('status', 'paid')
             ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()));
+    }
+
+    /** What the payer is charged: the plan price plus Paystack's fee, in pesewas. */
+    public function total(): int
+    {
+        return $this->amount + $this->fee;
     }
 
     public function isPaid(): bool
@@ -66,6 +73,8 @@ class AccessPass extends Model
             'searches_total' => $this->searches_total,
             'searches_left' => $this->searches_left,
             'amount' => $this->amount / 100,
+            'fee' => $this->fee / 100,
+            'total' => $this->total() / 100,
             'currency' => $this->currency,
             'status' => $this->status,
             'paid_at' => $this->paid_at?->toIso8601String(),

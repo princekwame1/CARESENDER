@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\PaymentSettings;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -142,6 +143,18 @@ class AccessPlan extends Model
             : $hours.' '.str('hour')->plural($hours);
     }
 
+    /** Paystack's fee the payer covers on top of the price, in pesewas. */
+    public function fee(): int
+    {
+        return PaymentSettings::feeFor($this->price);
+    }
+
+    /** What the payer is charged at checkout, in pesewas. */
+    public function total(): int
+    {
+        return $this->price + $this->fee();
+    }
+
     public function toApi(string $currency): array
     {
         return [
@@ -158,6 +171,8 @@ class AccessPlan extends Model
             'duration_hours' => $this->duration_hours,
             'duration_label' => $this->lengthLabel(),
             'price' => $this->price / 100,
+            'fee' => $this->fee() / 100,
+            'total' => $this->total() / 100,
             'currency' => $currency,
         ];
     }

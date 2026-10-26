@@ -21,6 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [AuthenticateSession::class]);
         // Location cookie is written by client JS, so it must stay unencrypted.
         $middleware->encryptCookies(except: [LocationCookie::NAME]);
+        // Apple posts the sign-in result from its own site, so it cannot carry our CSRF token.
+        $middleware->validateCsrfTokens(except: ['auth/apple/callback']);
         $middleware->redirectGuestsTo(fn () => route('login'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {

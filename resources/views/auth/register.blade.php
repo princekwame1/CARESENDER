@@ -3,10 +3,11 @@
         <form method="POST" action="{{ route('register') }}" class="card w-full max-w-2xl space-y-5 p-8 sm:p-10">
             @csrf
             <div class="flex flex-col items-center text-center">
-                <img src="/images/brand/favicon.png" alt="" width="64" height="64" class="size-16">
+                <img src="/images/brand/icon-128.webp" alt="" width="64" height="64" class="size-16">
                 <h1 class="mt-5 text-2xl font-bold">Create an account</h1>
                 <p class="mt-1 text-sm text-muted">Use it on this website and in the CareSenda app.</p>
             </div>
+            <x-social-sign-in class="sm:grid-cols-2" />
             <div class="grid gap-5 sm:grid-cols-2">
             <label class="block"><span class="label">Your name</span>
                 <input name="name" type="text" value="{{ old('name') }}" required autofocus autocomplete="name" maxlength="120" class="field">

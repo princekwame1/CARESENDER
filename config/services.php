@@ -14,6 +14,37 @@ return [
     |
     */
 
+    // Social sign-in. A provider's button only shows once its client id is set.
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => '/auth/google/callback',
+    ],
+
+    'facebook' => [
+        'client_id' => env('FACEBOOK_CLIENT_ID'),
+        'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
+        'redirect' => '/auth/facebook/callback',
+    ],
+
+    'microsoft' => [
+        'client_id' => env('MICROSOFT_CLIENT_ID'),
+        'client_secret' => env('MICROSOFT_CLIENT_SECRET'),
+        // "common" lets in both personal (Outlook, Hotmail) and work or school accounts.
+        'tenant' => env('MICROSOFT_TENANT_ID', 'common'),
+        'redirect' => '/auth/microsoft/callback',
+    ],
+
+    // client_id is the Services ID; the .p8 key signs a fresh client secret for each sign-in.
+    'apple' => [
+        'client_id' => env('APPLE_CLIENT_ID'),
+        'client_secret' => null,
+        'team_id' => env('APPLE_TEAM_ID'),
+        'key_id' => env('APPLE_KEY_ID'),
+        'private_key' => env('APPLE_PRIVATE_KEY'),
+        'redirect' => '/auth/apple/callback',
+    ],
+
     // Starting values only: the team sets the key and payment methods in /admin/payments.
     'paystack' => [
         'secret_key' => env('PAYSTACK_SECRET_KEY'),

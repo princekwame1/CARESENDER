@@ -147,14 +147,14 @@ class SubscriptionWebTest extends DirectoryTestCase
         $plan = AccessPlan::where('name', 'Full week')->firstOrFail();
         Http::fake([
             'api.paystack.co/transaction/initialize' => Http::response(['status' => true, 'data' => ['authorization_url' => 'https://checkout.paystack.com/web']]),
-            'api.paystack.co/transaction/verify/*' => Http::response(['status' => true, 'data' => ['status' => 'success', 'amount' => $plan->price, 'currency' => 'GHS']]),
+            'api.paystack.co/transaction/verify/*' => Http::response(['status' => true, 'data' => ['status' => 'success', 'amount' => $plan->total(), 'currency' => 'GHS']]),
         ]);
 
         $this->get('/plans')->assertOk()->assertSee('Full week')->assertSee('Create an account to buy');
         $this->post("/plans/{$plan->id}/checkout")->assertRedirect(route('login'));
 
         $user = User::factory()->create();
-        $this->actingAs($user)->get('/plans')->assertSee('Pay GHS '.number_format($plan->price / 100, 2));
+        $this->actingAs($user)->get('/plans')->assertSee('+ GHS 1.20 Paystack fee')->assertSee('Pay GHS 61.20');
         $this->post("/plans/{$plan->id}/checkout")->assertRedirect('https://checkout.paystack.com/web');
         Http::assertSent(fn ($r) => str_contains($r->url(), 'initialize') && $r['callback_url'] === route('plans.confirm'));
 

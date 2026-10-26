@@ -26,6 +26,23 @@ class PaymentSettings
         return max(1, (int) (self::raw('unlock_hours') ?? 24));
     }
 
+    /** Paystack's charge as a percentage of each payment (1.95% for local payments in Ghana). The payer covers it. */
+    public static function feePercent(): float
+    {
+        return max(0, (float) (self::raw('fee_percent') ?? 1.95));
+    }
+
+    /**
+     * The fee added to a price, in pesewas. Paystack takes its percentage of the whole bill,
+     * so the bill is grossed up until what's left after the fee is the full price.
+     */
+    public static function feeFor(int $price): int
+    {
+        $percent = self::feePercent();
+
+        return $percent > 0 && $price > 0 ? (int) ceil($price / (1 - $percent / 100)) - $price : 0;
+    }
+
     /** @return list<string> */
     public static function channels(): array
     {

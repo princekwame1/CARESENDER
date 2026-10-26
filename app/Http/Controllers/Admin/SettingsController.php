@@ -61,6 +61,7 @@ class SettingsController extends Controller
             'enabled' => ['boolean'],
             'paystack_secret' => ['nullable', 'string', 'max:200', 'regex:/^sk_(test|live)_\w+$/'],
             'unlock_hours' => ['required', 'integer', 'min:1', 'max:720'],
+            'fee_percent' => ['required', 'numeric', 'min:0', 'max:10'],
             'channels' => ['array'],
             'channels.*' => [Rule::in(array_keys(PaymentSettings::CHANNELS))],
         ], ['paystack_secret.regex' => 'Paste the secret key from Paystack (it starts with sk_live_ or sk_test_).']);
@@ -77,6 +78,7 @@ class SettingsController extends Controller
         PaymentSettings::save(array_filter([
             'enabled' => $enabled,
             'unlock_hours' => (string) $data['unlock_hours'],
+            'fee_percent' => (string) (float) $data['fee_percent'],
             'channels' => $data['channels'] ?? [],
             'paystack_secret' => $data['paystack_secret'] ?? null,
         ], fn ($v) => $v !== null));

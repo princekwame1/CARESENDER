@@ -52,7 +52,10 @@
                             <h2 class="mt-1.5 text-xl font-bold">{{ $plan->name }}</h2>
                             @if ($plan->description)<p class="mt-1 text-sm text-muted">{{ $plan->description }}</p>@endif
                         </div>
-                        <p class="text-3xl font-extrabold tabular-nums">{{ $currency }} {{ number_format($plan->price / 100, 2) }}</p>
+                        <div>
+                            <p class="text-3xl font-extrabold tabular-nums">{{ $currency }} {{ number_format($plan->price / 100, 2) }}</p>
+                            @if ($plan->fee() > 0)<p class="mt-1 text-xs text-muted">+ {{ $currency }} {{ number_format($plan->fee() / 100, 2) }} Paystack fee</p>@endif
+                        </div>
                         <ul class="grid gap-1.5 text-sm">
                             @foreach (\App\Models\AccessPlan::AREAS as $area => $label)
                                 <li @class(['flex items-center gap-2', 'text-muted line-through' => ! in_array($area, $plan->coveredAreas(), true)])>
@@ -70,7 +73,7 @@
                                 @if ($required && $canPay)
                                     <form method="POST" action="{{ route('plans.checkout', $plan) }}">
                                         @csrf
-                                        <button class="btn-primary w-full justify-center">Pay {{ $currency }} {{ number_format($plan->price / 100, 2) }}</button>
+                                        <button class="btn-primary w-full justify-center">Pay {{ $currency }} {{ number_format($plan->total() / 100, 2) }}</button>
                                     </form>
                                 @elseif ($required)
                                     <button type="button" class="btn-secondary w-full justify-center" disabled>Payments open soon</button>

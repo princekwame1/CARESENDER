@@ -111,6 +111,10 @@
                         <dt class="text-sm text-muted">An opened search stays open for</dt>
                         <dd class="mt-1">{{ \App\Models\AccessPlan::durationLabel(\App\Support\PaymentSettings::unlockHours()) }}</dd>
                     </div>
+                    <div>
+                        <dt class="text-sm text-muted">Paystack fee the payer covers</dt>
+                        <dd class="mt-1">{{ rtrim(rtrim(number_format(\App\Support\PaymentSettings::feePercent(), 2), '0'), '.') }}%</dd>
+                    </div>
                 </dl>
                 <div class="mt-6 rounded-2xl bg-surface-2 p-4 text-sm">
                     <p class="font-medium">Webhook URL for Paystack</p>
@@ -130,6 +134,7 @@
                         <input type="password" name="paystack_secret" autocomplete="off" placeholder="{{ $masked ? 'Leave empty to keep '.$masked : 'sk_live_…' }}" class="field">
                     </label>
                     <x-admin.field label="Hours an opened search stays open" name="unlock_hours" type="number" :value="\App\Support\PaymentSettings::unlockHours()" modal="edit-payments" min="1" max="720" required />
+                    <x-admin.field label="Paystack fee added to each payment (%)" name="fee_percent" type="number" :value="\App\Support\PaymentSettings::feePercent()" modal="edit-payments" min="0" max="10" step="0.01" required />
                     <fieldset>
                         <legend class="label">Ways to pay</legend>
                         <div class="flex flex-wrap gap-4">

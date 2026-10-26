@@ -143,7 +143,7 @@ class AccessApiTest extends DirectoryTestCase
         $plan = AccessPlan::where('name', 'Full week')->firstOrFail();
         Http::fake([
             'api.paystack.co/transaction/initialize' => Http::response(['status' => true, 'data' => ['authorization_url' => 'https://checkout.paystack.com/x']]),
-            'api.paystack.co/transaction/verify/*' => Http::response(['status' => true, 'data' => ['status' => 'success', 'amount' => $plan->price, 'currency' => 'GHS', 'channel' => 'mobile_money']]),
+            'api.paystack.co/transaction/verify/*' => Http::response(['status' => true, 'data' => ['status' => 'success', 'amount' => $plan->total(), 'currency' => 'GHS', 'channel' => 'mobile_money']]),
         ]);
         Sanctum::actingAs($user = User::factory()->create());
 
@@ -151,15 +151,29 @@ class AccessApiTest extends DirectoryTestCase
             ->assertCreated()
             ->assertJsonPath('data.authorization_url', 'https://checkout.paystack.com/x')
             ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.amount', 60)
+            ->assertJsonPath('data.fee', 1.2)
+            ->assertJsonPath('data.total', 61.2)
             ->json('data.reference');
 
         $this->getJson("/api/v1/me/passes/{$ref}")->assertOk()->assertJsonPath('data.status', 'paid');
         $pass = AccessPass::where('reference', $ref)->first();
         $this->assertEqualsWithDelta(now()->addDays(7)->timestamp, $pass->expires_at->timestamp, 5);
-        Http::assertSent(fn ($r) => str_contains($r->url(), 'initialize') && $r['amount'] === $plan->price && $r->hasHeader('Authorization', 'Bearer '.self::SECRET));
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'initialize') && $r['amount'] === 6120 && $r->hasHeader('Authorization', 'Bearer '.self::SECRET));
 
         $this->getJson('/api/v1/me/access')->assertJsonPath('data.full_access_until', fn ($v) => $v !== null);
         $this->assertSame($user->id, $pass->user_id);
+    }
+
+    public function test_paystack_fee_is_added_so_the_full_price_is_received(): void
+    {
+        $this->assertSame(1.95, PaymentSettings::feePercent());
+        // GHS 20.00 becomes GHS 20.40; Paystack's 1.95% of 20.40 is 0.398, leaving at least 20.00.
+        $this->assertSame(40, PaymentSettings::feeFor(2000));
+        $this->assertGreaterThanOrEqual(2000, 2040 - 2040 * 0.0195);
+
+        PaymentSettings::save(['fee_percent' => '0']);
+        $this->assertSame(0, PaymentSettings::feeFor(2000));
     }
 
     public function test_underpaid_transactions_do_not_activate(): void
@@ -168,7 +182,7 @@ class AccessApiTest extends DirectoryTestCase
         $plan = AccessPlan::where('name', 'Full day')->firstOrFail();
         Http::fake([
             'api.paystack.co/transaction/initialize' => Http::response(['status' => true, 'data' => ['authorization_url' => 'https://x']]),
-            'api.paystack.co/transaction/verify/*' => Http::response(['status' => true, 'data' => ['status' => 'success', 'amount' => 100, 'currency' => 'GHS']]),
+            'api.paystack.co/transaction/verify/*' => Http::response(['status' => true, 'data' => ['status' => 'success', 'amount' => $plan->price, 'currency' => 'GHS']]),
         ]);
         Sanctum::actingAs(User::factory()->create());
 
@@ -213,13 +227,14 @@ class AccessApiTest extends DirectoryTestCase
         $this->get('/admin/payments')->assertOk()->assertSee('Recent payments');
         $this->get('/admin/plans')->assertOk()->assertSee('Full week');
 
-        $this->put('/admin/settings/payments', ['enabled' => 1, 'unlock_hours' => 24, 'channels' => ['card']])
+        $this->put('/admin/settings/payments', ['enabled' => 1, 'unlock_hours' => 24, 'fee_percent' => 1.95, 'channels' => ['card']])
             ->assertSessionHasErrors('enabled'); // no key yet
-        $this->put('/admin/settings/payments', ['enabled' => 1, 'paystack_secret' => self::SECRET, 'unlock_hours' => 12, 'channels' => ['mobile_money']])
+        $this->put('/admin/settings/payments', ['enabled' => 1, 'paystack_secret' => self::SECRET, 'unlock_hours' => 12, 'fee_percent' => 2.5, 'channels' => ['mobile_money']])
             ->assertSessionHasNoErrors();
         $this->assertTrue(PaymentSettings::enabled());
         $this->assertSame(self::SECRET, PaymentSettings::secretKey());
         $this->assertSame(12, PaymentSettings::unlockHours());
+        $this->assertSame(2.5, PaymentSettings::feePercent());
 
         $newPlan = ['name' => '10 searches', 'billing' => 'search', 'searches' => 10, 'valid_days' => 60, 'price' => '18.50', 'is_active' => 1];
         $this->post('/admin/plans', $newPlan)->assertSessionHasErrors('areas');
