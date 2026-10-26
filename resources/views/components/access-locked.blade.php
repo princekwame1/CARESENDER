@@ -51,7 +51,6 @@
                         <div class="rounded-2xl bg-surface-2 text-sm ring-1 ring-transparent transition hover:ring-brand/40 has-[:checked]:bg-brand-soft has-[:checked]:ring-brand">
                             <label class="flex cursor-pointer items-center gap-3 px-4 py-3">
                                 <input id="access-single" type="radio" name="plan" value="{{ $singleSearch->id }}" data-submit-label="Pay with Paystack" class="accent-brand" @checked($singleChecked)>
-                                <x-icon name="search" class="size-5 shrink-0 text-brand" />
                                 <span class="flex-1"><span class="block font-semibold">Single search access</span><span class="block text-xs text-muted">Just these results. No account needed.</span></span>
                                 <span class="shrink-0 font-semibold tabular-nums">{{ $money($singleSearch->price) }}</span>
                             </label>
@@ -67,7 +66,6 @@
                     @foreach ($multiplePlans as $plan)
                         <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-surface-2 px-4 py-3 text-sm ring-1 ring-transparent transition hover:ring-brand/40 has-[:checked]:bg-brand-soft has-[:checked]:ring-brand">
                             <input type="radio" name="plan" value="{{ $plan->id }}" data-submit-label="{{ $planLabel($plan) }}" class="accent-brand" @checked($checkedPlan?->is($plan))>
-                            <x-icon name="clock" class="size-5 shrink-0 text-brand" />
                             <span class="flex-1">
                                 <span class="block font-semibold">{{ $plan->name }}</span>
                                 <span class="block text-xs text-muted">{{ $plan->isUnlimited() ? 'Multiple search access' : $plan->billingLabel() }}@if ($plan->lengthLabel()) for {{ $plan->lengthLabel() }}@endif · Opens: {{ \App\Models\AccessPlan::areasLabel($plan->areas) }}@guest · Needs an account @endguest</span>
