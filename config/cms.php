@@ -112,7 +112,7 @@ return [
         'contact.sent_text' => ['contact', 'After sending · text', 'rich', 'We’ve got it. Someone from our team will get back to you using the details you gave us.'],
 
         // Search
-        'search.notice' => ['search', 'Note above the search results', 'rich', 'Results are free for now while we set up Mobile Money payments. Each listing shows whether we’ve confirmed it.'],
+        'search.notice' => ['search', 'Note above the search results', 'rich', 'Each listing shows whether we’ve confirmed it. Prices and hours can change, so check with the facility before you go.'],
         'search.image_all' => ['search', 'Header photo · all care', 'image', 'health-fair-ghana', 'A nurse checks a man’s blood pressure at a health fair in Ghana'],
         'search.image_specialist' => ['search', 'Header photo · specialists', 'image', 'specialist-consultation', 'A doctor checking a patient’s blood pressure'],
         'search.image_test' => ['search', 'Header photo · tests', 'image', 'lab-malaria-test', 'Health workers carrying out malaria tests'],
