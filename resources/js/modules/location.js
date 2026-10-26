@@ -44,7 +44,7 @@ function position() {
                 3: 'Finding your location took too long. Please try again.',
             };
             reject(new Error(messages[err.code] || 'We couldn’t get your location.'));
-        }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 5 * 60 * 1000 });
+        }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60 * 1000 });
     });
 }
 
@@ -53,7 +53,7 @@ export async function detect() {
     const res = await fetch(`/api/v1/geo/resolve?lat=${coords.latitude}&lng=${coords.longitude}`, { headers: { Accept: 'application/json' } });
     if (!res.ok) throw new Error('We couldn’t work out your area. Please try again.');
     const { data } = await res.json();
-    const loc = { lat: data.lat, lng: data.lng, area: data.area, city: data.city, inCoverage: data.in_coverage, accuracy: coords.accuracy, at: Date.now() };
+    const loc = { lat: data.lat, lng: data.lng, area: data.area, city: data.city, inCoverage: data.in_coverage, inCountry: data.in_country, accuracy: coords.accuracy, at: Date.now() };
     persist(loc);
     listeners.forEach((fn) => fn(loc));
     return loc;
@@ -61,5 +61,13 @@ export async function detect() {
 
 export function label(loc) {
     if (!loc) return 'Use my location';
-    return loc.inCoverage ? `Near ${loc.area}` : 'Outside Accra and Tema';
+    if (loc.inCoverage) return `Near ${loc.area}`;
+    return loc.inCountry === false ? 'Location looks wrong' : 'Outside Accra and Tema';
+}
+
+// Why a detected location isn't usable, for toasts.
+export function outsideMessage(loc) {
+    return loc.inCountry === false
+        ? 'Your device says you’re outside Ghana. If you’re on a VPN or office network, turn it off and try again, or pick a city.'
+        : 'Looks like you’re outside Accra and Tema';
 }

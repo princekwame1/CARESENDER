@@ -19,7 +19,7 @@ class GeoLocator
     /**
      * Turn raw device coordinates into the nearest known CareSenda area.
      *
-     * @return array{lat: float, lng: float, area: ?string, area_id: ?int, city: ?string, distance_to_area_km: ?float, in_coverage: bool}
+     * @return array{lat: float, lng: float, area: ?string, area_id: ?int, city: ?string, distance_to_area_km: ?float, in_coverage: bool, in_country: bool}
      */
     public function resolve(float $lat, float $lng): array
     {
@@ -32,8 +32,7 @@ class GeoLocator
             }
         }
 
-        $b = config('caresenda.coverage.bounds');
-        $inBounds = $lat >= $b['south'] && $lat <= $b['north'] && $lng >= $b['west'] && $lng <= $b['east'];
+        $inBounds = self::withinBounds($lat, $lng, config('caresenda.coverage.bounds'));
         $inCoverage = $inBounds && $nearest && $best <= config('caresenda.coverage.max_match_km');
 
         return [
@@ -44,7 +43,14 @@ class GeoLocator
             'city' => $inCoverage ? $nearest['city'] : null,
             'distance_to_area_km' => $nearest ? round($best, 2) : null,
             'in_coverage' => (bool) $inCoverage,
+            'in_country' => self::withinBounds($lat, $lng, config('caresenda.coverage.country_bounds')),
         ];
+    }
+
+    /** @param  array{south: float, north: float, west: float, east: float}  $b */
+    private static function withinBounds(float $lat, float $lng, array $b): bool
+    {
+        return $lat >= $b['south'] && $lat <= $b['north'] && $lng >= $b['west'] && $lng <= $b['east'];
     }
 
     /**

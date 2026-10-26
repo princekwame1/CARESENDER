@@ -66,10 +66,18 @@
     <div class="card flex flex-col items-start gap-5 p-6 sm:flex-row sm:items-center">
         <span class="icon-tile !bg-accent-soft !text-accent"><x-icon name="alert" /></span>
         <div class="flex-1">
-            <h2 class="text-lg font-bold">Looks like you’re outside Accra and Tema</h2>
-            <p class="text-sm text-muted">We only cover Accra and Tema for now. Pick a city to keep browsing.</p>
+            @if ($location['in_country'])
+                <h2 class="text-lg font-bold">Looks like you’re outside Accra and Tema</h2>
+                <p class="text-sm text-muted">We only cover Accra and Tema for now. Pick a city to keep browsing.</p>
+            @else
+                <h2 class="text-lg font-bold">Your device says you’re outside Ghana</h2>
+                <p class="text-sm text-muted">This often happens on a VPN or some office networks. Turn the VPN off and try again, or pick a city.</p>
+            @endif
         </div>
-        <div class="flex gap-3">
+        <div class="flex flex-wrap gap-3">
+            @unless ($location['in_country'])
+                <button type="button" data-locate data-force class="btn-primary"><x-icon name="locate" />Try again</button>
+            @endunless
             <a href="{{ route('search', ['city' => 'Accra']) }}" class="btn-secondary">Accra</a>
             <a href="{{ route('search', ['city' => 'Tema']) }}" class="btn-secondary">Tema</a>
         </div>

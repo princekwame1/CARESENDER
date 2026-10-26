@@ -30,7 +30,7 @@
                     @forelse ($passes as $pass)
                         <tr>
                             <td class="whitespace-nowrap text-xs">{{ $pass->created_at->diffForHumans() }}</td>
-                            <td>{{ $pass->user?->name }}<span class="block text-xs text-muted">{{ $pass->user?->email }}</span></td>
+                            <td>{{ $pass->isGuest() ? 'Guest' : $pass->user?->name }}<span class="block text-xs text-muted">{{ $pass->user?->email ?? $pass->email }}</span></td>
                             <td>{{ $pass->plan_name }}</td>
                             <td class="tabular-nums">{{ $pass->currency }} {{ number_format($pass->amount / 100, 2) }}</td>
                             <td><span @class(['rounded-full px-2 py-0.5 text-xs font-medium', 'bg-brand-soft text-brand' => $pass->status === 'paid', 'bg-danger-soft text-danger' => $pass->status === 'failed', 'bg-surface-2 text-muted' => $pass->status === 'pending'])>{{ ['paid' => 'Paid', 'failed' => 'Failed', 'pending' => 'Waiting'][$pass->status] ?? $pass->status }}</span></td>

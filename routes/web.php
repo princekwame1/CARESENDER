@@ -18,6 +18,9 @@ Route::get('/search', SearchController::class)->name('search');
 // The website's maps read markers through the session, so signed-in members see what their plan opens.
 Route::get('/map/markers', [GeoController::class, 'markers'])->middleware('cache.headers:private;max_age=60')->name('map.markers');
 Route::post('/search/unlock', [SearchController::class, 'unlock'])->middleware(['auth', 'throttle:login'])->name('search.unlock');
+// Single searches can be bought without an account.
+Route::post('/search/buy', [SearchController::class, 'buy'])->middleware('throttle:auth')->name('search.buy');
+Route::get('/search/paid', [SearchController::class, 'paid'])->name('search.paid');
 Route::get('/facilities/{facility}', [FacilityController::class, 'show'])->name('facilities.show');
 Route::view('/how-we-verify', 'verify')->name('verify');
 Route::view('/about', 'about')->name('about');

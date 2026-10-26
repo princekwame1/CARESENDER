@@ -25,7 +25,7 @@
                     @if ($location)
                         <p class="mt-3 flex items-center gap-2 text-sm">
                             <x-icon name="locate" class="size-4 text-brand" />
-                            {{ $location['in_coverage'] ? 'Near '.$location['area'] : 'You’re outside Accra and Tema' }}
+                            {{ $location['in_coverage'] ? 'Near '.$location['area'] : ($location['in_country'] ? 'You’re outside Accra and Tema' : 'Your device says you’re outside Ghana') }}
                             @if ($filters->sort === 'distance') · closest first @endif
                         </p>
                     @endif
@@ -127,7 +127,7 @@
                     </div>
 
                     @if ($locked && $total > 0)
-                        <x-access-locked class="mt-6" :title="number_format($total).' '.($tab === 'facilities' ? Str::plural('facility', $total) : Str::plural('listing', $total)).' match this search'" :plans="$plans" :unlock="$unlock" :searches-left="$access['searches_left'] ?? 0">
+                        <x-access-locked class="mt-6" :title="number_format($total).' '.($tab === 'facilities' ? Str::plural('facility', $total) : Str::plural('listing', $total)).' match this search'" :plans="$plans" :unlock="$unlock" :searches-left="$access['searches_left'] ?? 0" :single-search="$singleSearch">
                             Names, contacts, doctors, days and prices are for members with a plan that includes {{ $lockedAreas }}.
                         </x-access-locked>
                     @elseif ($results === null || $results->isEmpty())

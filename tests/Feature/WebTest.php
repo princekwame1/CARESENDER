@@ -102,6 +102,15 @@ class WebTest extends DirectoryTestCase
             ->assertDontSee('Approximate, based on neighbourhood location');
     }
 
+    public function test_nearby_panel_explains_a_location_outside_ghana(): void
+    {
+        $this->withUnencryptedCookie('cs_loc', '59.74132,10.21272,') // Drammen, via a misplaced network
+            ->get('/nearby-panel')
+            ->assertOk()
+            ->assertSee('Your device says you’re outside Ghana')
+            ->assertSee('Try again');
+    }
+
     public function test_api_docs_are_only_for_admins(): void
     {
         $this->get('/admin/api')->assertRedirect('/login');

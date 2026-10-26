@@ -172,7 +172,7 @@
                     @forelse ($recentPayments as $pass)
                         <li class="flex items-center justify-between gap-4 py-2.5">
                             <span class="min-w-0">
-                                <span class="block truncate font-medium text-ink">{{ $pass->user?->name ?? 'Deleted account' }}</span>
+                                <span class="block truncate font-medium text-ink">{{ $pass->isGuest() ? 'Guest · '.$pass->email : ($pass->user?->name ?? 'Deleted account') }}</span>
                                 <span class="block truncate text-xs text-muted">{{ $pass->plan_name }} · {{ $pass->paid_at?->diffForHumans(short: true) }}</span>
                             </span>
                             <span class="shrink-0 font-semibold tabular-nums">{{ $pass->currency }} {{ number_format($pass->amount / 100, 2) }}</span>

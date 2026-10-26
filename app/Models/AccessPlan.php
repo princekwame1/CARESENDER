@@ -8,8 +8,11 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
-/** A plan the team sells: pay per search (a pack of searches), or unlimited access per hour, day, week, month or year. */
-#[Fillable(['name', 'description', 'kind', 'period', 'period_count', 'areas', 'searches', 'duration_hours', 'price', 'is_active', 'sort_order'])]
+/**
+ * A plan the team sells: pay per search (a pack of searches), or unlimited access per hour, day, week, month or year.
+ * Single-search plans with guest_checkout can be bought on a search's results without an account.
+ */
+#[Fillable(['name', 'description', 'kind', 'period', 'period_count', 'areas', 'searches', 'guest_checkout', 'duration_hours', 'price', 'is_active', 'sort_order'])]
 class AccessPlan extends Model
 {
     public const SEARCHES = 'searches';
@@ -36,13 +39,14 @@ class AccessPlan extends Model
         'tests' => 'Diagnostic tests',
     ];
 
-    protected $attributes = ['is_active' => true, 'sort_order' => 0, 'description' => null, 'areas' => null, 'searches' => null, 'duration_hours' => null, 'period' => null, 'period_count' => null];
+    protected $attributes = ['is_active' => true, 'sort_order' => 0, 'description' => null, 'areas' => null, 'searches' => null, 'guest_checkout' => false, 'duration_hours' => null, 'period' => null, 'period_count' => null];
 
     protected function casts(): array
     {
         return [
             'areas' => 'array',
             'searches' => 'integer',
+            'guest_checkout' => 'boolean',
             'period_count' => 'integer',
             'duration_hours' => 'integer',
             'price' => 'integer',
@@ -59,6 +63,25 @@ class AccessPlan extends Model
     public function isUnlimited(): bool
     {
         return $this->kind === self::UNLIMITED;
+    }
+
+    /** Whether people can buy this one search on a results page without an account. */
+    public function sellsToGuests(): bool
+    {
+        return $this->guest_checkout && ! $this->isUnlimited() && $this->searches === 1;
+    }
+
+    /**
+     * The single-search plan on sale that opens a search needing $areas: one covering every area first.
+     *
+     * @param  list<string>  $areas
+     */
+    public static function singleSearchFor(array $areas): ?self
+    {
+        $plans = self::available()->get()->filter->sellsToGuests();
+
+        return $plans->first(fn ($plan) => ! array_diff($areas, $plan->coveredAreas()))
+            ?? $plans->first(fn ($plan) => array_intersect($areas, $plan->coveredAreas()));
     }
 
     /** "search", or the period unlimited access is sold by ("hour" … "year"). */
@@ -168,6 +191,7 @@ class AccessPlan extends Model
             'period_count' => $this->period_count,
             'areas' => $this->coveredAreas(),
             'searches' => $this->isUnlimited() ? null : $this->searches,
+            'guest_checkout' => $this->sellsToGuests(),
             'duration_hours' => $this->duration_hours,
             'duration_label' => $this->lengthLabel(),
             'price' => $this->price / 100,

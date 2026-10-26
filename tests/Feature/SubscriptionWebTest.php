@@ -166,4 +166,35 @@ class SubscriptionWebTest extends DirectoryTestCase
         // Someone else's reference is not found.
         $this->actingAs(User::factory()->create())->get('/plans/confirm?reference='.$pass->reference)->assertSessionHasErrors('plan');
     }
+
+    public function test_visitors_buy_a_single_search_without_an_account(): void
+    {
+        $plan = AccessPlan::where('guest_checkout', true)->firstOrFail();
+        Http::fake([
+            'api.paystack.co/transaction/initialize' => Http::response(['status' => true, 'data' => ['authorization_url' => 'https://checkout.paystack.com/one']]),
+            'api.paystack.co/transaction/verify/*' => Http::response(['status' => true, 'data' => ['status' => 'success', 'amount' => $plan->total(), 'currency' => 'GHS']]),
+        ]);
+
+        $this->get('/search?q=gynaecologist')->assertSee('Just this search?')->assertSee('No account needed');
+        $this->post('/search/buy', ['q' => 'gynaecologist', 'tab' => 'services'])->assertSessionHasErrors('email');
+
+        $response = $this->post('/search/buy', ['q' => 'gynaecologist', 'tab' => 'services', 'email' => 'guest@example.com'])
+            ->assertRedirect('https://checkout.paystack.com/one')
+            ->assertCookie('cs_guest');
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'initialize') && $r['email'] === 'guest@example.com' && $r['amount'] === $plan->total());
+
+        $pass = AccessPass::whereNull('user_id')->firstOrFail();
+        $this->assertSame(500, $pass->amount);
+        $guest = $response->getCookie('cs_guest')->getValue();
+
+        // Another browser can't claim the payment or see the results.
+        $this->get('/search/paid?reference='.$pass->reference)->assertRedirect(route('home'));
+        $this->get('/search?q=gynaecologist')->assertDontSee('Dansoman Family Clinic');
+
+        $this->withCookie('cs_guest', $guest)->get('/search/paid?reference='.$pass->reference)
+            ->assertRedirect(route('search', ['q' => 'gynaecologist', 'tab' => 'services']))->assertSessionHas('status');
+        $this->assertSame(['paid', 0], [$pass->fresh()->status, $pass->fresh()->searches_left]);
+        $this->withCookie('cs_guest', $guest)->get('/search?q=gynaecologist')->assertSee('Dansoman Family Clinic')->assertSee('Dr. Ama Mensah');
+        $this->withCookie('cs_guest', $guest)->get('/search?q=legon&tab=facilities')->assertDontSee('tel:+233200000001', false);
+    }
 }

@@ -21,6 +21,8 @@ return [
         // Rough bounding box around Greater Accra; detections outside it fall back to manual choice.
         'bounds' => ['south' => 5.40, 'north' => 5.95, 'west' => -0.55, 'east' => 0.20],
         'max_match_km' => 15,
+        // Ghana's bounding box; detections outside it usually come from a VPN or a misplaced network.
+        'country_bounds' => ['south' => 4.5, 'north' => 11.2, 'west' => -3.3, 'east' => 1.2],
     ],
 
     'cities' => [

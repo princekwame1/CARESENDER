@@ -17,11 +17,12 @@ use Illuminate\Support\Str;
  * Who may see details (facility contacts, directions and hours; specialists' names, days and prices;
  * test prices), how search credits are spent, and how Paystack payments become passes. Each pass
  * opens only the areas (AccessPlan::AREAS) its plan includes. Search counts are always public.
+ * Visitors without an account can pay for a single search, kept open by GuestCookie.
  * Only enforced while payments are on.
  */
 class AccessGate
 {
-    /** @var array<int, array{until: array<string, ?Carbon>, facilities: array<string, array<string, true>>, signatures: array<string, array<string, Carbon>>, searches_left: int}> */
+    /** @var array<string, array{until: array<string, ?Carbon>, facilities: array<string, array<string, true>>, signatures: array<string, array<string, Carbon>>, searches_left: int}> */
     private array $grants = [];
 
     public function __construct(private PaystackClient $paystack, private DirectorySearch $search) {}
@@ -69,11 +70,10 @@ class AccessGate
         if (! self::required($user)) {
             return true;
         }
-        if (! $user) {
+        $grants = $this->viewerGrants($request, $user);
+        if (! $grants) {
             return false;
         }
-
-        $grants = $this->grantsFor($user->id);
 
         return $grants['until'][$area] !== null || isset($grants['facilities'][$area][$facilityId]);
     }
@@ -94,36 +94,61 @@ class AccessGate
      */
     public function grantsFor(int $userId): array
     {
-        return $this->grants[$userId] ??= (function () use ($userId) {
-            $passes = AccessPass::where('user_id', $userId)->active()->get(['kind', 'areas', 'searches_left', 'expires_at']);
-            $unlocks = SearchUnlock::where('user_id', $userId)->where('expires_at', '>', now())->get(['signature', 'facility_ids', 'areas', 'expires_at']);
-            $unlimited = $passes->where('kind', AccessPlan::UNLIMITED);
+        return $this->grants["user:{$userId}"] ??= $this->loadGrants('user_id', $userId);
+    }
 
-            $until = [];
-            $facilities = [];
-            foreach (array_keys(AccessPlan::AREAS) as $area) {
-                $until[$area] = $unlimited->filter(fn ($pass) => in_array($area, $pass->coveredAreas(), true))->max('expires_at');
-                $facilities[$area] = [];
-            }
+    /**
+     * What a visitor without an account opened with single searches (by their GuestCookie).
+     *
+     * @return array{until: array<string, ?Carbon>, facilities: array<string, array<string, true>>, signatures: array<string, array<string, Carbon>>, searches_left: int}
+     */
+    public function grantsForGuest(string $token): array
+    {
+        return $this->grants["guest:{$token}"] ??= $this->loadGrants('guest_token', $token);
+    }
 
-            $signatures = [];
-            foreach ($unlocks as $unlock) {
-                foreach ($unlock->coveredAreas() as $area) {
-                    foreach ($unlock->facility_ids as $id) {
-                        $facilities[$area][$id] = true;
-                    }
-                    $current = $signatures[$unlock->signature][$area] ?? null;
-                    $signatures[$unlock->signature][$area] = $current?->isAfter($unlock->expires_at) ? $current : $unlock->expires_at;
+    /** The signed-in user's grants, a guest's by cookie, or null for a visitor who never paid. */
+    private function viewerGrants(Request $request, ?User $user): ?array
+    {
+        if ($user) {
+            return $this->grantsFor($user->id);
+        }
+        $token = GuestCookie::read($request);
+
+        return $token ? $this->grantsForGuest($token) : null;
+    }
+
+    /** @return array{until: array<string, ?Carbon>, facilities: array<string, array<string, true>>, signatures: array<string, array<string, Carbon>>, searches_left: int} */
+    private function loadGrants(string $owner, int|string $ownerId): array
+    {
+        $passes = AccessPass::where($owner, $ownerId)->active()->get(['kind', 'areas', 'searches_left', 'expires_at']);
+        $unlocks = SearchUnlock::where($owner, $ownerId)->where('expires_at', '>', now())->get(['signature', 'facility_ids', 'areas', 'expires_at']);
+        $unlimited = $passes->where('kind', AccessPlan::UNLIMITED);
+
+        $until = [];
+        $facilities = [];
+        foreach (array_keys(AccessPlan::AREAS) as $area) {
+            $until[$area] = $unlimited->filter(fn ($pass) => in_array($area, $pass->coveredAreas(), true))->max('expires_at');
+            $facilities[$area] = [];
+        }
+
+        $signatures = [];
+        foreach ($unlocks as $unlock) {
+            foreach ($unlock->coveredAreas() as $area) {
+                foreach ($unlock->facility_ids as $id) {
+                    $facilities[$area][$id] = true;
                 }
+                $current = $signatures[$unlock->signature][$area] ?? null;
+                $signatures[$unlock->signature][$area] = $current?->isAfter($unlock->expires_at) ? $current : $unlock->expires_at;
             }
+        }
 
-            return [
-                'until' => $until,
-                'facilities' => $facilities,
-                'signatures' => $signatures,
-                'searches_left' => (int) $passes->where('kind', AccessPlan::SEARCHES)->sum('searches_left'),
-            ];
-        })();
+        return [
+            'until' => $until,
+            'facilities' => $facilities,
+            'signatures' => $signatures,
+            'searches_left' => (int) $passes->where('kind', AccessPlan::SEARCHES)->sum('searches_left'),
+        ];
     }
 
     /** When unlimited access to every area ends; null unless all areas are open. */
@@ -145,7 +170,7 @@ class AccessGate
         if (! self::required($user)) {
             return ['required' => false, 'unlocked' => true, 'areas' => array_fill_keys($needed, true), 'searches_left' => null, 'full_access_until' => null];
         }
-        $grants = $user ? $this->grantsFor($user->id) : null;
+        $grants = $this->viewerGrants($request, $user);
 
         $openUntil = [];
         foreach ($needed as $area) {
@@ -194,27 +219,55 @@ class AccessGate
             }
             $pass->decrement('searches_left');
 
-            return SearchUnlock::create([
-                'user_id' => $user->id,
-                'access_pass_id' => $pass->id,
-                'signature' => $signature,
-                'query' => $filters->q ? mb_substr($filters->q, 0, 120) : null,
-                'facility_ids' => $this->search->facilityIds($filters),
-                'areas' => $pass->coveredAreas(),
-                'expires_at' => now()->addHours(PaymentSettings::unlockHours()),
-            ]);
+            return $this->openSearch($pass, $filters);
         });
 
-        unset($this->grants[$user->id]);
+        $this->grants = [];
 
         return $unlock;
+    }
+
+    /** Opens a search's result facilities for the pass owner, for the areas the pass covers. */
+    private function openSearch(AccessPass $pass, SearchFilters $filters): SearchUnlock
+    {
+        return SearchUnlock::create([
+            'user_id' => $pass->user_id,
+            'guest_token' => $pass->guest_token,
+            'access_pass_id' => $pass->id,
+            'signature' => $filters->signature(),
+            'query' => $filters->q ? mb_substr($filters->q, 0, 120) : null,
+            'facility_ids' => $this->search->facilityIds($filters),
+            'areas' => $pass->coveredAreas(),
+            'expires_at' => now()->addHours(PaymentSettings::unlockHours()),
+        ]);
     }
 
     /** Creates a pending pass and a Paystack checkout. Returns [pass, authorization_url]. */
     public function checkout(User $user, AccessPlan $plan, ?string $callbackUrl = null): array
     {
-        $pass = AccessPass::create([
-            'user_id' => $user->id,
+        return $this->startPayment($plan, $user->email, ['user_id' => $user->id], $callbackUrl);
+    }
+
+    /**
+     * Checkout for one search that opens as soon as Paystack confirms, for a member or a guest
+     * (by GuestCookie token, no account). $filters are the search as the gate checks it. Returns [pass, authorization_url].
+     */
+    public function checkoutSearch(AccessPlan $plan, SearchFilters $filters, string $email, ?User $user, ?string $guestToken, string $callbackUrl): array
+    {
+        $search = array_diff_key(get_object_vars($filters), array_flip(['sort', 'page', 'perPage']));
+
+        return $this->startPayment($plan, $email, [
+            'user_id' => $user?->id,
+            'guest_token' => $user ? null : $guestToken,
+            'search' => $search,
+        ], $callbackUrl);
+    }
+
+    /** @param  array<string, mixed>  $owner  user_id, or guest_token and the search to open */
+    private function startPayment(AccessPlan $plan, string $email, array $owner, ?string $callbackUrl): array
+    {
+        $pass = AccessPass::create($owner + [
+            'email' => $email,
             'access_plan_id' => $plan->id,
             'plan_name' => $plan->name,
             'kind' => $plan->kind,
@@ -229,10 +282,11 @@ class AccessGate
             'reference' => 'CS-'.Str::upper(Str::random(16)),
         ]);
 
-        $checkout = $this->paystack->initialize($user->email, $pass->total(), $pass->currency, $pass->reference, [
+        $checkout = $this->paystack->initialize($email, $pass->total(), $pass->currency, $pass->reference, array_filter([
             'plan' => $plan->name,
-            'user_id' => $user->id,
-        ], $callbackUrl);
+            'user_id' => $pass->user_id,
+            'guest' => $pass->isGuest() ?: null,
+        ]), $callbackUrl);
 
         return [$pass, $checkout['authorization_url'] ?? null];
     }
@@ -279,7 +333,12 @@ class AccessGate
                     'searches_left' => $pass->isUnlimited() ? null : $pass->searches_total,
                     'expires_at' => AccessPlan::endsAt($start, $pass->period, $pass->period_count, $pass->duration_hours),
                 ]);
-                unset($this->grants[$pass->user_id]);
+                // A single search bought on a results page opens that search straight away.
+                if ($pass->search && $pass->searches_left > 0) {
+                    $pass->decrement('searches_left');
+                    $this->openSearch($pass, new SearchFilters(...$pass->search));
+                }
+                $this->grants = [];
             } elseif (in_array($status, ['failed', 'reversed'], true)) {
                 $pass->update(['status' => 'failed']);
             }

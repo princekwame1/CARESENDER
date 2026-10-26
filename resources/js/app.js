@@ -1,4 +1,4 @@
-import { detect, label, onLocation, savedLocation } from './modules/location';
+import { detect, label, onLocation, outsideMessage, savedLocation } from './modules/location';
 import { initAnimations } from './modules/animate';
 import { initFlashToasts, toast } from './modules/toast';
 import { initFileUploads } from './modules/file-upload';
@@ -171,7 +171,7 @@ document.addEventListener('click', async (e) => {
     $$('[data-location-label]').forEach((el) => (el.textContent = 'Finding you…'));
     try {
         const loc = await detect();
-        toast(loc.inCoverage ? `Showing care near ${loc.area}` : 'Looks like you’re outside Accra and Tema', loc.inCoverage ? 'success' : 'info');
+        toast(loc.inCoverage ? `Showing care near ${loc.area}` : outsideMessage(loc), loc.inCoverage ? 'success' : 'info');
         // On search pages, re-run the query so results are sorted by distance.
         if (location.pathname === '/search') {
             const params = new URLSearchParams(location.search);

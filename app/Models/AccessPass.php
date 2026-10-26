@@ -7,8 +7,11 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/** One purchase of an access plan. Plan details are copied in so later plan edits don't change it. */
-#[Fillable(['user_id', 'access_plan_id', 'plan_name', 'kind', 'period', 'period_count', 'areas', 'searches_total', 'searches_left', 'duration_hours', 'amount', 'fee', 'currency', 'reference', 'status', 'channel', 'paid_at', 'expires_at'])]
+/**
+ * One purchase of an access plan. Plan details are copied in so later plan edits don't change it.
+ * Guests (no account) are known by guest_token; `search` holds the search a single-search purchase opens.
+ */
+#[Fillable(['user_id', 'guest_token', 'email', 'access_plan_id', 'plan_name', 'kind', 'period', 'period_count', 'areas', 'searches_total', 'searches_left', 'search', 'duration_hours', 'amount', 'fee', 'currency', 'reference', 'status', 'channel', 'paid_at', 'expires_at'])]
 class AccessPass extends Model
 {
     protected $attributes = ['status' => 'pending', 'channel' => null, 'paid_at' => null, 'expires_at' => null, 'fee' => 0, 'areas' => null, 'period' => null, 'period_count' => null];
@@ -20,6 +23,7 @@ class AccessPass extends Model
             'period_count' => 'integer',
             'searches_total' => 'integer',
             'searches_left' => 'integer',
+            'search' => 'array',
             'duration_hours' => 'integer',
             'amount' => 'integer',
             'fee' => 'integer',
@@ -49,6 +53,11 @@ class AccessPass extends Model
     public function isPaid(): bool
     {
         return $this->status === 'paid';
+    }
+
+    public function isGuest(): bool
+    {
+        return $this->user_id === null;
     }
 
     public function isUnlimited(): bool

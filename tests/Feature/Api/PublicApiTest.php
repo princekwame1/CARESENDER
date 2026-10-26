@@ -31,8 +31,17 @@ class PublicApiTest extends DirectoryTestCase
         $this->getJson('/api/v1/geo/resolve?lat=6.6885&lng=-1.6244') // Kumasi
             ->assertOk()
             ->assertJsonPath('data.in_coverage', false)
+            ->assertJsonPath('data.in_country', true)
             ->assertJsonPath('data.area', null)
             ->assertJsonPath('data.nearby', null);
+    }
+
+    public function test_geo_resolve_flags_locations_outside_ghana(): void
+    {
+        $this->getJson('/api/v1/geo/resolve?lat=59.741323&lng=10.21272') // Drammen, via a misplaced network
+            ->assertOk()
+            ->assertJsonPath('data.in_coverage', false)
+            ->assertJsonPath('data.in_country', false);
     }
 
     public function test_geo_resolve_validates_coordinates(): void
