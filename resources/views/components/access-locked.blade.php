@@ -11,6 +11,8 @@
     $money = fn (int $pesewas) => $currency.' '.number_format($pesewas / 100, 2);
     $singleChecked = $singleSearch && (old('plan') === null || old('plan') == $singleSearch->id);
     $planLabel = fn (\App\Models\AccessPlan $plan) => auth()->check() ? "Buy {$plan->name}" : "Sign up for {$plan->name}";
+    // A member's current plan, which buying one of $multiplePlans would replace.
+    $currentPlan = auth()->check() && $multiplePlans->isNotEmpty() ? \App\Models\AccessPass::where('user_id', auth()->id())->running()->latest('paid_at')->first() : null;
     $checkedPlan = $singleChecked ? null : ($multiplePlans->firstWhere('id', old('plan')) ?? $multiplePlans->first());
 @endphp
 <div {{ $attributes->merge(['class' => 'card flex flex-col items-center gap-4 p-8 text-center sm:p-10']) }}>
@@ -74,6 +76,10 @@
                         </label>
                     @endforeach
                 </fieldset>
+
+                @if ($currentPlan)
+                    <x-plan-replaced-notice :plan="$currentPlan" />
+                @endif
 
                 <button class="btn-primary justify-center" data-submit-label-target>{{ $checkedPlan ? $planLabel($checkedPlan) : 'Pay with Paystack' }}</button>
                 @guest

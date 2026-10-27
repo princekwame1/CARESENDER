@@ -22,6 +22,8 @@ class PlanController extends Controller
             'plans' => AccessPlan::available()->get(),
             'grants' => $user ? $gate->grantsFor($user->id) : null,
             'passes' => $user ? AccessPass::where('user_id', $user->id)->active()->latest('paid_at')->get() : collect(),
+            // Buying another plan replaces this one, so the page warns before checkout.
+            'currentPlan' => $user ? AccessPass::where('user_id', $user->id)->running()->latest('paid_at')->first() : null,
             'required' => AccessGate::required($user),
             'canPay' => AccessGate::enabled() && $paystack->configured(),
         ]);

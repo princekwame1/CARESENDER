@@ -19,7 +19,7 @@ class AccountController extends Controller
             'user' => $user,
             'passes' => AccessPass::where('user_id', $user->id)->active()->latest('paid_at')->get(),
             'pastPasses' => AccessPass::where('user_id', $user->id)->where('status', 'paid')->where('expires_at', '<=', now())->latest('paid_at')->limit(10)->get(),
-            'openSearches' => SearchUnlock::where('user_id', $user->id)->where('expires_at', '>', now())->whereNotNull('query')->latest('expires_at')->get(),
+            'openSearches' => SearchUnlock::where('user_id', $user->id)->open()->whereNotNull('query')->latest('expires_at')->get(),
             'fullUntil' => AccessGate::fullAccessUntil($gate->grantsFor($user->id)),
             'required' => AccessGate::required($user),
         ]);

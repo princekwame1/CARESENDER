@@ -33,6 +33,9 @@
         @if ($plans->isEmpty())
             <p class="card mt-8 p-8 text-center text-sm text-muted">There are no plans on sale right now. Please check back soon.</p>
         @else
+            @if ($currentPlan && $required)
+                <x-plan-replaced-notice :plan="$currentPlan" class="mt-8" />
+            @endif
             <div data-stagger class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($plans as $plan)
                     <article data-reveal class="card flex flex-col gap-4 p-6">

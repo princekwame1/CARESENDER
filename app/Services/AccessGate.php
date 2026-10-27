@@ -122,7 +122,7 @@ class AccessGate
     private function loadGrants(string $owner, int|string $ownerId): array
     {
         $passes = AccessPass::where($owner, $ownerId)->active()->get(['kind', 'areas', 'searches_left', 'expires_at']);
-        $unlocks = SearchUnlock::where($owner, $ownerId)->where('expires_at', '>', now())->get(['signature', 'facility_ids', 'areas', 'expires_at']);
+        $unlocks = SearchUnlock::where($owner, $ownerId)->where(fn ($query) => $query->open()->orWhereIn('id', self::openedNow()))->get(['signature', 'facility_ids', 'areas', 'expires_at']);
         $unlimited = $passes->where('kind', AccessPlan::UNLIMITED);
 
         $until = [];
@@ -201,7 +201,7 @@ class AccessGate
         $needed = self::areasForSearch($filters);
 
         $unlock = DB::transaction(function () use ($user, $filters, $signature, $needed) {
-            $existing = SearchUnlock::where('user_id', $user->id)->where('signature', $signature)->where('expires_at', '>', now())->get()
+            $existing = SearchUnlock::where('user_id', $user->id)->where('signature', $signature)->open()->get()
                 ->first(fn ($unlock) => ! array_diff($needed, $unlock->coveredAreas()));
             if ($existing) {
                 return $existing;
@@ -242,7 +242,7 @@ class AccessGate
         $unlock = $this->unlockSearch($user, $filters);
         if ($unlock?->accessPass && $filters->type !== 'facility') {
             $facilities = $filters->with(['type' => 'facility']);
-            $alreadyOpen = SearchUnlock::where('user_id', $user->id)->where('signature', $facilities->signature())->where('expires_at', '>', now())->exists();
+            $alreadyOpen = SearchUnlock::where('user_id', $user->id)->where('signature', $facilities->signature())->open()->exists();
             if (! $alreadyOpen) {
                 $this->openSearch($unlock->accessPass, $facilities, $unlock->expires_at);
             }
@@ -252,10 +252,20 @@ class AccessGate
         return $unlock;
     }
 
+    /**
+     * Searches opened during this request: still shown on this page even if they used a pack's last search.
+     *
+     * @return list<int>
+     */
+    private static function openedNow(): array
+    {
+        return request()->attributes->get('opened_searches', []);
+    }
+
     /** Opens a search's result facilities for the pass owner, for the areas the pass covers. */
     private function openSearch(AccessPass $pass, SearchFilters $filters, ?Carbon $expiresAt = null): SearchUnlock
     {
-        return SearchUnlock::create([
+        $unlock = SearchUnlock::create([
             'user_id' => $pass->user_id,
             'guest_token' => $pass->guest_token,
             'access_pass_id' => $pass->id,
@@ -265,6 +275,9 @@ class AccessGate
             'areas' => $pass->coveredAreas(),
             'expires_at' => $expiresAt ?? now()->addHours(PaymentSettings::unlockHours()),
         ]);
+        request()->attributes->set('opened_searches', [...self::openedNow(), $unlock->id]);
+
+        return $unlock;
     }
 
     /** Creates a pending pass and a Paystack checkout. Returns [pass, authorization_url]. */
@@ -343,12 +356,9 @@ class AccessGate
                 && (int) ($transaction['amount'] ?? 0) >= $pass->total()
                 && strtoupper((string) ($transaction['currency'] ?? '')) === $pass->currency) {
                 $paidAt = now();
-                $start = $paidAt;
-                if ($pass->isUnlimited()) {
-                    // Buying while unlimited access to the same areas is still running adds the time on the end.
-                    $until = collect($pass->coveredAreas())->map(fn ($area) => $this->grantsFor($pass->user_id)['until'][$area]);
-                    $current = $until->contains(null) ? null : $until->min();
-                    $start = $current?->isAfter($paidAt) ? $current : $paidAt;
+                // A new plan replaces the member's current one: whatever is left on it ends now (single searches stay).
+                if ($pass->user_id && ! $pass->isSingleSearch()) {
+                    AccessPass::where('user_id', $pass->user_id)->whereKeyNot($pass->id)->running()->update(['expires_at' => $paidAt]);
                 }
 
                 $pass->update([
@@ -356,7 +366,7 @@ class AccessGate
                     'paid_at' => $paidAt,
                     'channel' => $transaction['channel'] ?? null,
                     'searches_left' => $pass->isUnlimited() ? null : $pass->searches_total,
-                    'expires_at' => AccessPlan::endsAt($start, $pass->period, $pass->period_count, $pass->duration_hours),
+                    'expires_at' => AccessPlan::endsAt($paidAt, $pass->period, $pass->period_count, $pass->duration_hours),
                 ]);
                 // A single search bought on a results page opens that search straight away.
                 if ($pass->search && $pass->searches_left > 0) {

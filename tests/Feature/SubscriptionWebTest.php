@@ -83,6 +83,23 @@ class SubscriptionWebTest extends DirectoryTestCase
         $this->get('/search?q=gynaecologist&city=Accra')->assertSee('Used 1 search from your plan');
         $this->assertSame(0, $searchesLeft());
         $this->get('/search?q=legon')->assertSee('match this search')->assertDontSee('Legon Test Hospital');
+
+        // Once the plan has ended, the searches it opened close too (a new request starts with a fresh AccessGate).
+        $this->app->forgetScopedInstances();
+        $this->get('/search?q=gynaecologist')->assertSee('match this search')->assertDontSee('Dansoman Family Clinic');
+        $this->get('/search?q=gynaecologist&city=Accra')->assertSee('match this search');
+        $this->actingAs($user->fresh())->get('/account')->assertOk()->assertDontSee('Searches you’ve opened');
+    }
+
+    public function test_searches_close_when_the_plan_expires(): void
+    {
+        $user = $this->memberWith(AccessPlan::SEARCHES, null, searches: 5);
+        $this->actingAs($user)->get('/search?q=gynaecologist')->assertSee('Dansoman Family Clinic');
+
+        AccessPass::where('user_id', $user->id)->update(['expires_at' => now()->subMinute()]);
+        $this->app->forgetScopedInstances();
+
+        $this->get('/search?q=gynaecologist')->assertSee('match this search')->assertDontSee('Dansoman Family Clinic');
     }
 
     public function test_closest_to_you_and_the_map_hide_names_and_locations_without_a_plan(): void
@@ -177,6 +194,28 @@ class SubscriptionWebTest extends DirectoryTestCase
 
         // Someone else's reference is not found.
         $this->actingAs(User::factory()->create())->get('/plans/confirm?reference='.$pass->reference)->assertSessionHasErrors('plan');
+    }
+
+    public function test_a_new_plan_replaces_the_members_current_plan(): void
+    {
+        $plan = AccessPlan::where('name', 'Full week')->firstOrFail();
+        Http::fake([
+            'api.paystack.co/transaction/initialize' => Http::response(['status' => true, 'data' => ['authorization_url' => 'https://checkout.paystack.com/web']]),
+            'api.paystack.co/transaction/verify/*' => Http::response(['status' => true, 'data' => ['status' => 'success', 'amount' => $plan->total(), 'currency' => 'GHS']]),
+        ]);
+        $user = $this->memberWith(AccessPlan::SEARCHES, null, searches: 5);
+        $current = AccessPass::where('user_id', $user->id)->firstOrFail();
+
+        $this->actingAs($user)->get('/plans')->assertSee('Buying a new plan will replace it');
+        $this->post("/plans/{$plan->id}/checkout");
+        $new = AccessPass::where('user_id', $user->id)->whereKeyNot($current->id)->firstOrFail();
+        $this->get('/plans/confirm?reference='.$new->reference);
+
+        $this->assertFalse($current->fresh()->expires_at->isFuture());
+        $this->assertSame('paid', $new->fresh()->status);
+        $this->assertTrue($new->fresh()->expires_at->isFuture());
+        $this->app->forgetScopedInstances();
+        $this->get('/plans')->assertSee('active plan: <strong>Full week</strong>', false);
     }
 
     public function test_visitors_buy_a_single_search_without_an_account(): void

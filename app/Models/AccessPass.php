@@ -44,6 +44,22 @@ class AccessPass extends Model
             ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()));
     }
 
+    /**
+     * A plan still in use: active, with searches left if it is a search pack. Single searches (bought for one search)
+     * are not plans, so buying a plan never replaces them.
+     */
+    public function scopeRunning(Builder $query): void
+    {
+        $query->active()->where(fn ($q) => $q->whereNull('searches_total')->orWhere('searches_total', '>', 1))
+            ->where(fn ($q) => $q->where('kind', '!=', AccessPlan::SEARCHES)->orWhere('searches_left', '>', 0));
+    }
+
+    /** Whether this is a single search bought for one search rather than a plan. */
+    public function isSingleSearch(): bool
+    {
+        return ! $this->isUnlimited() && $this->searches_total === 1;
+    }
+
     /** What the payer is charged: the plan price plus Paystack's fee, in pesewas. */
     public function total(): int
     {
