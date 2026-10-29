@@ -10,10 +10,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * One purchase of an access plan. Plan details are copied in so later plan edits don't change it.
  * Guests (no account) are known by guest_token; `search` holds the search a single-search purchase opens.
+ * Free trial passes (channel FREE_TRIAL) are given at sign-up and cost nothing.
  */
 #[Fillable(['user_id', 'guest_token', 'email', 'access_plan_id', 'plan_name', 'kind', 'period', 'period_count', 'areas', 'searches_total', 'searches_left', 'search', 'duration_hours', 'amount', 'fee', 'currency', 'reference', 'status', 'channel', 'paid_at', 'expires_at'])]
 class AccessPass extends Model
 {
+    public const FREE_TRIAL = 'free_trial';
+
     protected $attributes = ['status' => 'pending', 'channel' => null, 'paid_at' => null, 'expires_at' => null, 'fee' => 0, 'areas' => null, 'period' => null, 'period_count' => null];
 
     protected function casts(): array
@@ -44,13 +47,19 @@ class AccessPass extends Model
             ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()));
     }
 
+    /** Passes that were paid for, leaving out free trials. */
+    public function scopeBought(Builder $query): void
+    {
+        $query->where(fn ($q) => $q->whereNull('channel')->orWhere('channel', '!=', self::FREE_TRIAL));
+    }
+
     /**
      * A plan still in use: active, with searches left if it is a search pack. Single searches (bought for one search)
-     * are not plans, so buying a plan never replaces them.
+     * and free trials are not plans, so buying a plan never replaces them.
      */
     public function scopeRunning(Builder $query): void
     {
-        $query->active()->where(fn ($q) => $q->whereNull('searches_total')->orWhere('searches_total', '>', 1))
+        $query->active()->bought()->where(fn ($q) => $q->whereNull('searches_total')->orWhere('searches_total', '>', 1))
             ->where(fn ($q) => $q->where('kind', '!=', AccessPlan::SEARCHES)->orWhere('searches_left', '>', 0));
     }
 
@@ -64,6 +73,11 @@ class AccessPass extends Model
     public function total(): int
     {
         return $this->amount + $this->fee;
+    }
+
+    public function isFreeTrial(): bool
+    {
+        return $this->channel === self::FREE_TRIAL;
     }
 
     public function isPaid(): bool

@@ -9,7 +9,7 @@
     @if ($favicon = \App\Support\Branding::faviconUrl())<link rel="icon" href="{{ $favicon }}"><link rel="apple-touch-icon" href="{{ \App\Support\Branding::logoUrl() ?? $favicon }}">@else
     <link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" type="image/png" sizes="32x32" href="/images/brand/favicon-32.png"><link rel="icon" type="image/png" sizes="512x512" href="/images/brand/favicon.png"><link rel="apple-touch-icon" href="/images/brand/apple-touch-icon.png">@endif
     <link rel="manifest" href="/manifest.webmanifest">
-    <script>document.documentElement.classList.add('js');try{const t=localStorage.getItem('cs-theme');if(t)document.documentElement.classList.add(t)}catch(e){}</script>
+    <script>document.documentElement.classList.add('js');try{document.documentElement.classList.add(localStorage.getItem('cs-theme')||'dark')}catch(e){document.documentElement.classList.add('dark')}</script>
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('head')

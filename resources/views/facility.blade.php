@@ -16,7 +16,7 @@
                         @if ($facility->whatsappUrl())<a href="{{ $facility->whatsappUrl() }}" target="_blank" rel="noopener" class="btn-secondary"><x-icon name="chat" />WhatsApp</a>@endif
                         <a href="{{ $facility->directionsUrl() }}" target="_blank" rel="noopener" class="btn-secondary"><x-icon name="route" />Directions</a>
                     @else
-                        <p class="inline-flex items-center gap-2 rounded-2xl bg-surface-2 px-4 py-3 text-sm text-muted"><x-icon name="lock" class="size-4" />The address, phone, WhatsApp, directions and opening hours are for members with a plan that includes facility details. <a href="{{ auth()->check() ? route('plans') : route('register', ['back' => request()->getRequestUri()]) }}" class="text-brand underline">{{ auth()->check() ? 'Choose a plan' : 'Create an account' }}</a></p>
+                        <p class="inline-flex items-center gap-2 rounded-2xl bg-surface-2 px-4 py-3 text-sm text-muted"><x-icon name="lock" class="size-4" />The address, phone, WhatsApp, directions and opening hours are for members with a plan that includes facility details. <a href="{{ auth()->check() ? route('plans') : route('register', ['back' => request()->getRequestUri()]) }}" class="text-brand underline">{{ auth()->check() ? 'Choose a plan' : (($freeTrial = \App\Services\AccessGate::freeTrialOffer()) ? "Sign up for {$freeTrial}" : 'Create an account') }}</a></p>
                     @endif
                 </div>
                 @if ($facility->issue)

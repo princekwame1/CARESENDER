@@ -14,12 +14,21 @@
     // A member's current plan, which buying one of $multiplePlans would replace.
     $currentPlan = auth()->check() && $multiplePlans->isNotEmpty() ? \App\Models\AccessPass::where('user_id', auth()->id())->running()->latest('paid_at')->first() : null;
     $checkedPlan = $singleChecked ? null : ($multiplePlans->firstWhere('id', old('plan')) ?? $multiplePlans->first());
+    // Visitors can sign up for a free trial instead of paying; they come back here and the search opens.
+    $freeTrial = \App\Services\AccessGate::freeTrialOffer();
 @endphp
 <div {{ $attributes->merge(['class' => 'card flex flex-col items-center gap-4 p-8 text-center sm:p-10']) }}>
     <span class="icon-tile"><x-icon name="list" /></span>
     <h2 class="text-xl font-bold">{{ $title }}</h2>
     <p class="max-w-md text-sm text-muted">{{ $slot }}</p>
     @error('unlock')<p class="text-sm text-danger">{{ $message }}</p>@enderror
+
+    @if ($freeTrial)
+        <div class="grid w-full max-w-md gap-3 rounded-2xl bg-accent-soft p-4 text-sm">
+            <p><span class="font-semibold text-accent">Try it free.</span> Create an account and get {{ $freeTrial }}, no payment needed.</p>
+            <a href="{{ route('register', ['back' => $back]) }}" class="btn-primary justify-center">Sign up for your free trial</a>
+        </div>
+    @endif
 
     @if ($unlock && auth()->check() && $searchesLeft > 0)
         <form method="POST" action="{{ route('search.unlock') }}">
@@ -97,7 +106,9 @@
     @else
         <div class="flex flex-wrap justify-center gap-3">
             @guest
-                <a href="{{ route('register', ['back' => $back]) }}" class="btn-primary">Create an account</a>
+                @unless ($freeTrial)
+                    <a href="{{ route('register', ['back' => $back]) }}" class="btn-primary">Create an account</a>
+                @endunless
                 <a href="{{ route('login', ['back' => $back]) }}" class="btn-secondary">Sign in</a>
             @else
                 <a href="{{ route('plans') }}" @class([$unlock && $searchesLeft > 0 ? 'btn-secondary' : 'btn-primary'])>{{ $unlock && $searchesLeft > 0 ? 'See plans' : 'Choose a plan' }}</a>

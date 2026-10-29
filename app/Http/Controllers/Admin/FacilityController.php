@@ -22,7 +22,7 @@ class FacilityController extends Controller
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
             'city' => ['nullable', 'in:'.implode(',', array_keys(config('caresenda.cities')))],
-            'status' => ['nullable', 'in:unverified,verified,no-phone,hidden'],
+            'status' => ['nullable', 'in:unverified,verified,no-phone,active,hidden'],
         ]);
 
         $facilities = Facility::query()
@@ -35,6 +35,7 @@ class FacilityController extends Controller
             ->when(($filters['status'] ?? null) === 'unverified', fn ($q) => $q->whereNull('verified_at')->whereNotNull('phone'))
             ->when(($filters['status'] ?? null) === 'verified', fn ($q) => $q->whereNotNull('verified_at'))
             ->when(($filters['status'] ?? null) === 'no-phone', fn ($q) => $q->whereNull('phone'))
+            ->when(($filters['status'] ?? null) === 'active', fn ($q) => $q->where('is_active', true))
             ->when(($filters['status'] ?? null) === 'hidden', fn ($q) => $q->where('is_active', false))
             ->orderByRaw('verified_at is not null')
             ->orderByDesc('services_count')

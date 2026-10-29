@@ -9,12 +9,19 @@ use App\Models\SearchLog;
 use App\Models\User;
 use App\Services\DirectoryStats;
 use App\Support\PaymentSettings;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function __invoke(DirectoryStats $stats): View
+    /** The overview is for admins; the secretariat starts on the facilities list. */
+    public function __invoke(Request $request, DirectoryStats $stats): View|RedirectResponse
     {
+        if (! $request->user()->isAdmin()) {
+            return redirect()->route('admin.facilities.index');
+        }
+
         $activity = $stats->searchActivity(14);
         // The 14-day series split into the previous and the current week.
         [$lastWeek, $thisWeek] = array_chunk(array_values($activity['daily']), 7);
@@ -32,14 +39,14 @@ class DashboardController extends Controller
             ],
             'revenue' => [
                 'amount' => AccessPass::where('status', 'paid')->where('paid_at', '>=', now()->subDays(30))->sum('amount') / 100,
-                'count' => AccessPass::where('status', 'paid')->where('paid_at', '>=', now()->subDays(30))->count(),
+                'count' => AccessPass::bought()->where('status', 'paid')->where('paid_at', '>=', now()->subDays(30))->count(),
                 'currency' => PaymentSettings::currency(),
                 'enabled' => PaymentSettings::enabled(),
             ],
             'verifiedFacilities' => Facility::active()->whereNotNull('verified_at')->count(),
             'recentSearches' => SearchLog::latest('created_at')->limit(8)->get(),
             'recentlyVerified' => Facility::whereNotNull('verified_at')->latest('verified_at')->limit(5)->get(['id', 'name', 'area', 'city', 'verified_at']),
-            'recentPayments' => AccessPass::with('user:id,name')->where('status', 'paid')->latest('paid_at')->limit(5)->get(),
+            'recentPayments' => AccessPass::with('user:id,name')->bought()->where('status', 'paid')->latest('paid_at')->limit(5)->get(),
             'unverifiedWithPhone' => Facility::whereNull('verified_at')->whereNotNull('phone')->count(),
         ]);
     }

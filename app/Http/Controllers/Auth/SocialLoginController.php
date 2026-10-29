@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\SocialAccount;
 use App\Models\User;
+use App\Services\AccessGate;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -93,10 +94,10 @@ class SocialLoginController extends Controller
         $request->session()->regenerate();
 
         if ($user->wasRecentlyCreated) {
-            return redirect()->intended(route('plans'))->with('status', 'Welcome to CareSenda. Your account is ready.');
+            return redirect()->intended(route('plans'))->with('status', RegisterController::welcomeMessage());
         }
 
-        return redirect()->intended($user->isAdmin() ? route('admin.dashboard') : route('home'));
+        return redirect()->intended($user->isStaff() ? route('admin.dashboard') : route('home'));
     }
 
     /** The member behind the provider's answer, signing them up if needed, or a message saying why not. */
@@ -130,7 +131,7 @@ class SocialLoginController extends Controller
         if ($existingUser) {
             // Only link when the provider vouches for the email, so nobody can take over an account by
             // adding someone else's address to theirs. Team accounts always sign in with a password.
-            if ($existingUser->isAdmin() || ! $this->hasVerifiedEmail($provider, $providerUser)) {
+            if ($existingUser->isStaff() || ! $this->hasVerifiedEmail($provider, $providerUser)) {
                 return 'There is already an account with this email. Sign in with your password instead.';
             }
             $existingUser->socialAccounts()->create(['provider' => $provider, 'provider_user_id' => (string) $providerUser->getId()]);
@@ -149,6 +150,7 @@ class SocialLoginController extends Controller
                 $user->forceFill(['email_verified_at' => now()])->save();
             }
             $user->socialAccounts()->create(['provider' => $provider, 'provider_user_id' => (string) $providerUser->getId()]);
+            AccessGate::startFreeTrial($user);
 
             return $user;
         });

@@ -14,7 +14,7 @@ class FacilityController extends Controller
 {
     public function show(Request $request, Facility $facility, GeoLocator $geo, AccessGate $gate): View
     {
-        abort_unless($facility->is_active || $request->user()?->isAdmin(), 404);
+        abort_unless($facility->is_active || $request->user()?->isStaff(), 404);
 
         $facility->load(['services' => fn ($q) => $q->where('available', true)->orderBy('service')]);
 

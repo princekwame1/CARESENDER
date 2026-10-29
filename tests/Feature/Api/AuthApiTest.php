@@ -23,6 +23,20 @@ class AuthApiTest extends DirectoryTestCase
         $this->assertSame(1, User::first()->tokens()->count());
     }
 
+    public function test_registering_in_the_app_gives_a_free_search(): void
+    {
+        $this->getJson('/api/v1/meta')->assertJsonPath('data.free_trial_searches', 1);
+
+        $token = $this->postJson('/api/v1/auth/register', [
+            'name' => 'Ama', 'email' => 'ama@example.com', 'password' => 'secret123', 'device_name' => 'pixel',
+        ])->assertCreated()->json('token');
+
+        $this->withToken($token)->getJson('/api/v1/me/access')->assertOk()
+            ->assertJsonPath('data.searches_left', 1)
+            ->assertJsonPath('data.passes.0.plan_name', 'Free trial')
+            ->assertJsonPath('data.passes.0.total', 0);
+    }
+
     public function test_role_cannot_be_mass_assigned_on_register(): void
     {
         $this->postJson('/api/v1/auth/register', [

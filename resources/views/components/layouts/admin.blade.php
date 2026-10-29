@@ -1,9 +1,10 @@
 @props(['title', 'heading' => null])
 @php
     $unread = \App\Models\ContactMessage::whereNull('read_at')->count();
-    // Sidebar sections: [route, active pattern, icon, label]
-    $sections = [
-        'Overview' => [['admin.dashboard', 'admin.dashboard', 'chart', 'Dashboard']],
+    $isAdmin = auth()->user()->isAdmin();
+    // Sidebar sections: [route, active pattern, icon, label]. The secretariat sees only the directory and messages.
+    $sections = array_filter([
+        'Overview' => $isAdmin ? [['admin.dashboard', 'admin.dashboard', 'chart', 'Dashboard']] : null,
         'Directory' => [
             ['admin.facilities.index', 'admin.facilities.*', 'building', 'Facilities'],
             ['admin.catalog.index', 'admin.catalog.*', 'list', 'Services'],
@@ -12,15 +13,17 @@
         'Website' => [
             ['admin.messages.index', 'admin.messages.*', 'chat', 'Messages'],
         ],
-        'Business' => [
+        'Business' => $isAdmin ? [
             ['admin.plans.index', 'admin.plans.*', 'sparkle', 'Plans'],
             ['admin.payments.index', 'admin.payments.*', 'shield', 'Payments'],
-        ],
-        'System' => [
+        ] : null,
+        'System' => $isAdmin ? [
+            ['admin.users.index', 'admin.users.*', 'user', 'Users'],
+            ['admin.team.index', 'admin.team.*', 'user', 'Team'],
             ['admin.settings.edit', 'admin.settings.*', 'filter', 'Settings'],
             ['admin.api', 'admin.api', 'code', 'API'],
-        ],
-    ];
+        ] : null,
+    ]);
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -57,7 +60,7 @@
                     </a>
                 @endforeach
 
-                @if ($section === 'Website')
+                @if ($section === 'Website' && $isAdmin)
                     @php($inContent = request()->routeIs('admin.content.*'))
                     <details class="group/cms" @if ($inContent) open @endif>
                         <summary title="Page content" @class(['sidebar-link relative flex cursor-pointer list-none items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition [&::-webkit-details-marker]:hidden', 'text-brand' => $inContent, 'text-muted hover:bg-surface-2 hover:text-ink' => ! $inContent])>

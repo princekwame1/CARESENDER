@@ -6,6 +6,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -19,7 +20,20 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $attributes = ['role' => 'member', 'username' => null, 'avatar_path' => null];
+    public const MEMBER = 'member';
+
+    public const ADMIN = 'admin';
+
+    /** Team members who keep facilities and specialists up to date and answer messages, without access to money or settings. */
+    public const SECRETARIAT = 'secretariat';
+
+    /** Team roles, as shown on /admin/team. */
+    public const STAFF_ROLES = [
+        self::ADMIN => 'Administrator',
+        self::SECRETARIAT => 'Secretariat',
+    ];
+
+    protected $attributes = ['role' => self::MEMBER, 'username' => null, 'avatar_path' => null];
 
     /**
      * Get the attributes that should be cast.
@@ -42,7 +56,29 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return $this->role === self::ADMIN;
+    }
+
+    public function isSecretariat(): bool
+    {
+        return $this->role === self::SECRETARIAT;
+    }
+
+    /** Admins and the secretariat: they use the team dashboard and see everything on the site for free. */
+    public function isStaff(): bool
+    {
+        return array_key_exists($this->role, self::STAFF_ROLES);
+    }
+
+    /** "Administrator", "Secretariat". */
+    public function roleLabel(): string
+    {
+        return self::STAFF_ROLES[$this->role] ?? 'Member';
+    }
+
+    public function scopeStaff(Builder $query): void
+    {
+        $query->whereIn('role', array_keys(self::STAFF_ROLES));
     }
 
     public function searches(): HasMany

@@ -227,10 +227,11 @@ class AccessApiTest extends DirectoryTestCase
         $this->get('/admin/payments')->assertOk()->assertSee('Recent payments');
         $this->get('/admin/plans')->assertOk()->assertSee('Full week');
 
-        $this->put('/admin/settings/payments', ['enabled' => 1, 'unlock_hours' => 24, 'fee_percent' => 1.95, 'channels' => ['card']])
+        $this->put('/admin/settings/payments', ['enabled' => 1, 'unlock_hours' => 24, 'free_trial_searches' => 1, 'fee_percent' => 1.95, 'channels' => ['card']])
             ->assertSessionHasErrors('enabled'); // no key yet
-        $this->put('/admin/settings/payments', ['enabled' => 1, 'paystack_secret' => self::SECRET, 'unlock_hours' => 12, 'fee_percent' => 2.5, 'channels' => ['mobile_money']])
+        $this->put('/admin/settings/payments', ['enabled' => 1, 'paystack_secret' => self::SECRET, 'unlock_hours' => 12, 'free_trial_searches' => 2, 'fee_percent' => 2.5, 'channels' => ['mobile_money']])
             ->assertSessionHasNoErrors();
+        $this->assertSame(2, PaymentSettings::freeTrialSearches());
         $this->assertTrue(PaymentSettings::enabled());
         $this->assertSame(self::SECRET, PaymentSettings::secretKey());
         $this->assertSame(12, PaymentSettings::unlockHours());

@@ -14,6 +14,7 @@
                         <option value="unverified" @selected(($filters['status'] ?? null) === 'unverified')>Not checked yet</option>
                         <option value="verified" @selected(($filters['status'] ?? null) === 'verified')>Checked</option>
                         <option value="no-phone" @selected(($filters['status'] ?? null) === 'no-phone')>Missing a phone number</option>
+                        <option value="active" @selected(($filters['status'] ?? null) === 'active')>Shown on the website</option>
                         <option value="hidden" @selected(($filters['status'] ?? null) === 'hidden')>Hidden from the website</option>
                     </select>
                     <button class="btn-secondary">Search</button>

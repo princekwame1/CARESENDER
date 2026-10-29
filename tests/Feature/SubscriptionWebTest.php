@@ -153,7 +153,74 @@ class SubscriptionWebTest extends DirectoryTestCase
         $this->assertAuthenticatedAs($user);
         $this->assertFalse($user->isAdmin());
         $this->assertSame('+233240000000', $user->phone);
-        $this->get('/plans')->assertOk()->assertSee('You don’t have a plan yet', false);
+        $this->get('/plans')->assertOk()->assertSee('Free trial')->assertSee('1 of 1 searches left');
+    }
+
+    public function test_visitors_sign_up_for_a_free_search_that_opens_their_search(): void
+    {
+        $this->get('/search?q=gynaecologist')->assertSee('Sign up for your free trial')->assertSee('get 1 free search');
+        $this->get('/register?back='.urlencode('/search?q=gynaecologist'))->assertSee('Free trial: sign up and get 1 free search.');
+
+        $this->post('/register', ['name' => 'Ama', 'email' => 'ama@example.test', 'phone_country' => 'GH', 'password' => 'secret123', 'password_confirmation' => 'secret123'])
+            ->assertRedirect('/search?q=gynaecologist')
+            ->assertSessionHas('status', 'Welcome to CareSenda. Your account is ready, with 1 free search.');
+
+        $trial = AccessPass::where('user_id', User::where('email', 'ama@example.test')->value('id'))->sole();
+        $this->assertSame(AccessPass::FREE_TRIAL, $trial->channel);
+        $this->assertSame(0, $trial->amount);
+        $this->assertSame(1, $trial->searches_left);
+        $this->assertNull($trial->expires_at);
+
+        $this->get('/search?q=gynaecologist')->assertSee('Dansoman Family Clinic')->assertSee('Used 1 search from your plan');
+        $this->assertSame(0, $trial->fresh()->searches_left);
+        $this->get('/search?q=legon')->assertSee('match this search')->assertDontSee('Legon Test Hospital');
+    }
+
+    public function test_visitors_see_the_free_search_offer_across_the_site_but_members_do_not(): void
+    {
+        $this->get('/')->assertSee('Sign up and get 1 free search');
+        $this->get('/facilities/f-legon')->assertSee('Sign up for 1 free search');
+        $this->get('/login')->assertSee('and get 1 free search');
+
+        $this->actingAs($this->memberWith(AccessPlan::SEARCHES, null, searches: 1));
+        $this->get('/')->assertDontSee('Sign up and get 1 free search');
+        $this->get('/facilities/f-legon')->assertDontSee('Sign up for 1 free search');
+    }
+
+    public function test_no_free_search_is_given_when_the_free_trial_is_off(): void
+    {
+        PaymentSettings::save(['free_trial_searches' => '0']);
+
+        $this->get('/search?q=gynaecologist')->assertDontSee('Sign up for your free trial');
+        $this->post('/register', ['name' => 'Ama', 'email' => 'ama@example.test', 'phone_country' => 'GH', 'password' => 'secret123', 'password_confirmation' => 'secret123'])
+            ->assertSessionHas('status', 'Welcome to CareSenda. Your account is ready.');
+
+        $this->assertSame(0, AccessPass::count());
+    }
+
+    public function test_buying_a_plan_keeps_free_trial_searches_and_trials_are_not_payments(): void
+    {
+        PaymentSettings::save(['free_trial_searches' => '3']);
+        $plan = AccessPlan::where('name', 'Full week')->firstOrFail();
+        Http::fake([
+            'api.paystack.co/transaction/initialize' => Http::response(['status' => true, 'data' => ['authorization_url' => 'https://checkout.paystack.com/web']]),
+            'api.paystack.co/transaction/verify/*' => Http::response(['status' => true, 'data' => ['status' => 'success', 'amount' => $plan->total(), 'currency' => 'GHS']]),
+        ]);
+        $this->post('/register', ['name' => 'Ama', 'email' => 'ama@example.test', 'phone_country' => 'GH', 'password' => 'secret123', 'password_confirmation' => 'secret123']);
+        $trial = AccessPass::sole();
+
+        $this->get('/plans')->assertDontSee('Buying a new plan will replace it');
+        $this->post("/plans/{$plan->id}/checkout");
+        $bought = AccessPass::whereKeyNot($trial->id)->sole();
+        $this->get('/plans/confirm?reference='.$bought->reference);
+
+        $this->assertSame('paid', $bought->fresh()->status);
+        $this->assertNull($trial->fresh()->expires_at);
+        $this->assertSame(3, $trial->fresh()->searches_left);
+
+        $this->flushSession();
+        $this->actingAs(User::factory()->create(['role' => 'admin']))->get('/admin/payments')
+            ->assertSee($bought->reference)->assertDontSee($trial->reference);
     }
 
     public function test_phone_numbers_are_saved_with_the_country_code(): void
@@ -272,7 +339,7 @@ class SubscriptionWebTest extends DirectoryTestCase
         $this->get($checkout)->assertRedirect('https://checkout.paystack.com/week');
         Http::assertSent(fn ($r) => str_contains($r->url(), 'initialize') && $r['email'] === 'ama@example.test' && $r['callback_url'] === route('search.paid'));
 
-        $pass = AccessPass::where('user_id', User::where('email', 'ama@example.test')->value('id'))->firstOrFail();
+        $pass = AccessPass::where('user_id', User::where('email', 'ama@example.test')->value('id'))->where('access_plan_id', $plan->id)->firstOrFail();
         $this->get('/search/paid?reference='.$pass->reference)
             ->assertRedirect(route('search', ['q' => 'gynaecologist', 'tab' => 'services']))->assertSessionHas('status');
         $this->get('/search?q=gynaecologist')->assertSee('Dansoman Family Clinic');

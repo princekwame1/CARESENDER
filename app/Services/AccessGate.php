@@ -40,7 +40,7 @@ class AccessGate
     /** Whether this user has to pay at all. */
     public static function required(?User $user): bool
     {
-        return self::enabled() && ! $user?->isAdmin();
+        return self::enabled() && ! $user?->isStaff();
     }
 
     /** The access area that covers a service listing ("specialist" or "test"). */
@@ -278,6 +278,47 @@ class AccessGate
         request()->attributes->set('opened_searches', [...self::openedNow(), $unlock->id]);
 
         return $unlock;
+    }
+
+    /**
+     * Gives a new member their free trial: search credits (PaymentSettings::freeTrialSearches) that open every area
+     * and never run out. Nothing is given when the trial is switched off.
+     */
+    public static function startFreeTrial(User $user): ?AccessPass
+    {
+        $searches = PaymentSettings::freeTrialSearches();
+        if ($searches === 0 || $user->isStaff()) {
+            return null;
+        }
+
+        return AccessPass::create([
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'plan_name' => 'Free trial',
+            'kind' => AccessPlan::SEARCHES,
+            'searches_total' => $searches,
+            'searches_left' => $searches,
+            'amount' => 0,
+            'currency' => PaymentSettings::currency(),
+            'reference' => 'CS-TRIAL-'.Str::upper(Str::random(12)),
+            'status' => 'paid',
+            'channel' => AccessPass::FREE_TRIAL,
+            'paid_at' => now(),
+        ]);
+    }
+
+    /** "1 free search", "3 free searches"; null when the free trial is off. */
+    public static function freeTrialLabel(): ?string
+    {
+        $searches = PaymentSettings::freeTrialSearches();
+
+        return $searches > 0 ? $searches.' free '.Str::plural('search', $searches) : null;
+    }
+
+    /** The free trial to offer the current visitor ("1 free search"): only to visitors without an account while payments are on. */
+    public static function freeTrialOffer(): ?string
+    {
+        return self::enabled() && auth()->guest() ? self::freeTrialLabel() : null;
     }
 
     /** Creates a pending pass and a Paystack checkout. Returns [pass, authorization_url]. */

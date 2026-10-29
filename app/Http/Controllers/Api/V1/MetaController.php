@@ -28,6 +28,8 @@ class MetaController extends Controller
             'common_tests' => config('caresenda.common_tests'),
             'access_plans' => AccessController::planList(),
             'payments_enabled' => PaymentSettings::enabled(),
+            // Searches every new account gets for free; 0 when there's no free trial.
+            'free_trial_searches' => PaymentSettings::freeTrialSearches(),
             // "Continue with …" buttons: open {site}/auth/{id}/redirect?app_challenge=… in the browser.
             'social_providers' => collect(SocialLoginController::enabledProviders())
                 ->map(fn ($label, $id) => ['id' => $id, 'label' => $label])

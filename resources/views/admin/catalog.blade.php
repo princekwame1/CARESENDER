@@ -107,7 +107,7 @@
                     <p class="text-sm text-muted">{{ $item->listings_count ? $item->listings_count.' '.Str::plural('facility', $item->listings_count).' offer this, so renaming it changes their listings too.' : 'No facility offers this yet.' }}</p>
                 </form>
                 <x-slot:footer>
-                    @if ($item->listings_count === 0)
+                    @if ($item->listings_count === 0 && auth()->user()->isAdmin())
                         <form method="POST" action="{{ route('admin.catalog.destroy', $item) }}" class="mr-auto" onsubmit="return confirm('Delete {{ addslashes($item->name) }}?')">@csrf @method('DELETE')<button class="btn-ghost !text-danger">Delete</button></form>
                     @endif
                     <button type="button" class="btn-ghost" data-modal-close>Cancel</button>

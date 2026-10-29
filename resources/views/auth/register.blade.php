@@ -8,6 +8,8 @@
                 <p class="mt-1 text-sm text-muted">Use it on this website and in the CareSenda app.</p>
                 @if (str_starts_with((string) request('back'), '/search/checkout/'))
                     <p class="mt-3 rounded-2xl bg-brand-soft px-4 py-2 text-sm text-brand">Next, you’ll pay with Paystack and go straight to your search results.</p>
+                @elseif ($freeTrial = \App\Services\AccessGate::freeTrialOffer())
+                    <p class="mt-3 rounded-2xl bg-accent-soft px-4 py-2 text-sm font-medium text-accent">Free trial: sign up and get {{ $freeTrial }}. No payment needed.</p>
                 @endif
             </div>
             <x-social-sign-in class="sm:grid-cols-2" />

@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\AccessGate;
 use App\Support\PhoneNumber;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
@@ -42,10 +44,23 @@ class RegisterController extends Controller
                 ?? throw ValidationException::withMessages(['phone' => 'That phone number doesn’t look right. Check it and try again.']);
         }
 
-        $user = User::create(Arr::except($data, 'phone_country'));
+        $user = DB::transaction(function () use ($data) {
+            $user = User::create(Arr::except($data, 'phone_country'));
+            AccessGate::startFreeTrial($user);
+
+            return $user;
+        });
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->intended(route('plans'))->with('status', 'Welcome to CareSenda. Your account is ready.');
+        return redirect()->intended(route('plans'))->with('status', self::welcomeMessage());
+    }
+
+    /** "Welcome to CareSenda. Your account is ready, with 1 free search." */
+    public static function welcomeMessage(): string
+    {
+        $trial = AccessGate::freeTrialLabel();
+
+        return 'Welcome to CareSenda. Your account is ready'.($trial ? ", with {$trial}." : '.');
     }
 }

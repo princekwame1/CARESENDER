@@ -17,7 +17,7 @@
             @error('login')<p class="text-sm text-danger">{{ $message }}</p>@enderror
             <label class="flex items-center gap-3 text-sm"><input type="checkbox" name="remember" class="accent-[var(--brand)]"> Keep me signed in</label>
             <button class="btn-primary w-full">Sign in</button>
-            <p class="text-center text-sm text-muted">New here? <a href="{{ route('register') }}" class="font-semibold text-brand underline">Create an account</a></p>
+            <p class="text-center text-sm text-muted">New here? <a href="{{ route('register') }}" class="font-semibold text-brand underline">Create an account</a>@if ($freeTrial = \App\Services\AccessGate::freeTrialOffer()) and get {{ $freeTrial }}@endif</p>
         </form>
     </div>
 </x-layouts.app>

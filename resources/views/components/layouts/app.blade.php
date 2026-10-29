@@ -34,14 +34,13 @@
                 <x-icon name="moon" class="size-5" />
             </button>
             @auth
-                @if (auth()->user()->isAdmin())
-                    <a href="{{ route('admin.dashboard') }}" class="btn-secondary hidden whitespace-nowrap !py-2 sm:inline-flex" title="Admin dashboard"><x-icon name="chart" /><span class="hidden 2xl:inline">Admin</span></a>
+                @if (auth()->user()->isStaff())
+                    <a href="{{ route('admin.dashboard') }}" class="btn-secondary hidden whitespace-nowrap !py-2 sm:inline-flex" title="Team dashboard"><x-icon name="chart" /><span class="hidden 2xl:inline">{{ auth()->user()->isAdmin() ? 'Admin' : 'Team' }}</span></a>
                 @endif
                 <a href="{{ route('account') }}" @class(['btn-ghost !p-2.5', '!text-brand' => request()->routeIs('account')]) aria-label="Your account" title="Your account"><x-icon name="user" /></a>
                 <form method="POST" action="{{ route('logout') }}" class="hidden sm:block">@csrf<button class="btn-ghost !p-2.5" aria-label="Log out"><x-icon name="logout" /></button></form>
             @else
-                <a href="{{ route('login') }}" class="btn-secondary whitespace-nowrap !px-3.5 !py-2 text-sm">Sign in</a>
-            @endauth
+                <a href="{{ route('login') }}" class="btn-secondary whitespace-nowrap !px-3.5 !py-2 text-sm">Sign in</a>            @endauth
         </div>
     </div>
 </header>

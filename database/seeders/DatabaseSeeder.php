@@ -16,6 +16,8 @@ class DatabaseSeeder extends Seeder
         );
         $admin->forceFill(['role' => 'admin', 'username' => env('ADMIN_USERNAME', 'admin')])->save();
 
+        $this->call(SecretariatSeeder::class);
+
         $result = $importer->import(config('caresenda.dataset'));
         $this->command?->info("Imported {$result['facilities']} facilities and {$result['services']} services.");
     }

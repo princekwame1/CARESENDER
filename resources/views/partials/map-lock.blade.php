@@ -4,7 +4,8 @@
         <p class="flex max-w-xs flex-col items-center gap-2 rounded-2xl bg-surface/95 px-5 py-4 text-center text-sm shadow-card">
             <x-icon name="lock" class="size-5 text-brand" />
             <span>Exact locations and names are for members with a plan that includes facility details.</span>
-            <a href="{{ auth()->check() ? route('plans') : route('register', ['back' => '/']) }}" class="font-semibold text-brand underline">{{ auth()->check() ? 'Choose a plan' : 'Create an account' }}</a>
+            @php($freeTrial = \App\Services\AccessGate::freeTrialOffer())
+            <a href="{{ auth()->check() ? route('plans') : route('register', ['back' => '/']) }}" class="font-semibold text-brand underline">{{ auth()->check() ? 'Choose a plan' : ($freeTrial ? "Sign up for {$freeTrial}" : 'Create an account') }}</a>
         </p>
     </div>
 @endunless

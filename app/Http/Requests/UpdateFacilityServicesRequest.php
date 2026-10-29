@@ -11,7 +11,7 @@ class UpdateFacilityServicesRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return (bool) $this->user()?->isAdmin();
+        return (bool) $this->user()?->isStaff();
     }
 
     public function rules(): array

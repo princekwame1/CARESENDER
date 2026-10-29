@@ -26,6 +26,12 @@ class PaymentSettings
         return max(1, (int) (self::raw('unlock_hours') ?? 24));
     }
 
+    /** Free searches every new member gets when they sign up; 0 switches the free trial off. */
+    public static function freeTrialSearches(): int
+    {
+        return max(0, (int) (self::raw('free_trial_searches') ?? 1));
+    }
+
     /** Paystack's charge as a percentage of each payment (1.95% for local payments in Ghana). The payer covers it. */
     public static function feePercent(): float
     {

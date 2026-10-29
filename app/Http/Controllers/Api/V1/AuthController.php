@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Auth\SocialLoginController;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\AccessGate;
 use App\Support\PhoneNumber;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -36,7 +38,12 @@ class AuthController extends Controller
                 ?? throw ValidationException::withMessages(['phone' => 'That phone number doesn’t look right. Check it and try again.']);
         }
 
-        $user = User::create(Arr::except($data, ['device_name', 'phone_country']));
+        $user = DB::transaction(function () use ($data) {
+            $user = User::create(Arr::except($data, ['device_name', 'phone_country']));
+            AccessGate::startFreeTrial($user);
+
+            return $user;
+        });
 
         return $this->tokenResponse($user, $data['device_name'], 201);
     }

@@ -207,7 +207,7 @@ async function autoDetect() {
     } catch {}
 }
 
-// Theme toggle (system default, manual override persisted per device)
+// Theme toggle (dark by default, manual override persisted per device)
 document.addEventListener('click', (e) => {
     if (!e.target.closest('[data-theme-toggle]')) return;
     const root = document.documentElement;

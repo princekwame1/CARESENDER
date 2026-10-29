@@ -46,7 +46,7 @@
                 <form method="POST" action="{{ route('admin.facilities.update', $facility) }}">@csrf @method('PUT')<input type="hidden" name="mark_checked" value="1"><button class="btn-secondary !py-2">I checked this today</button></form>
                 <a href="{{ route('facilities.show', $facility) }}" target="_blank" class="btn-secondary !py-2">See it on the website</a>
                 <form method="POST" action="{{ route('admin.facilities.toggle', $facility) }}">@csrf @method('PATCH')<button class="btn-secondary !py-2">{{ $facility->is_active ? 'Hide it' : 'Show it' }}</button></form>
-                <form method="POST" action="{{ route('admin.facilities.destroy', $facility) }}" onsubmit="return confirm('Delete {{ addslashes($facility->name) }} and everything listed under it? This can’t be undone.')">@csrf @method('DELETE')<button class="btn-ghost !py-2 !text-danger">Delete</button></form>
+                @if (auth()->user()->isAdmin())<form method="POST" action="{{ route('admin.facilities.destroy', $facility) }}" onsubmit="return confirm('Delete {{ addslashes($facility->name) }} and everything listed under it? This can’t be undone.')">@csrf @method('DELETE')<button class="btn-ghost !py-2 !text-danger">Delete</button></form>@endif
             </div>
         </section>
 

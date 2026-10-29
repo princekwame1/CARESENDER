@@ -101,7 +101,7 @@
                 </div>
             </form>
             <x-slot:footer>
-                @if ($sp->services_count === 0)
+                @if ($sp->services_count === 0 && auth()->user()->isAdmin())
                     <form method="POST" action="{{ route('admin.specialties.destroy', $sp) }}" class="mr-auto" onsubmit="return confirm('Delete {{ addslashes($sp->name) }}?')">@csrf @method('DELETE')<button class="btn-ghost !text-danger">Delete</button></form>
                 @endif
                 <button type="button" class="btn-ghost" data-modal-close>Cancel</button>

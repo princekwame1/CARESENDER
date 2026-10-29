@@ -289,7 +289,9 @@ class WebTest extends DirectoryTestCase
         $this->getJson('/api/v1/facilities/f-dansoman')->assertNotFound();
         $this->getJson('/api/v1/meta')->assertJsonPath('data.totals.facilities', 2);
 
-        $this->actingAs($admin)->get('/facilities/f-dansoman')->assertOk(); // admins can still preview
+        $this->actingAs($admin)->get('/admin/facilities?status=active')->assertOk()->assertSee('Legon Test Hospital')->assertDontSee('Dansoman Family Clinic');
+        $this->get('/admin/facilities?status=hidden')->assertOk()->assertSee('Dansoman Family Clinic')->assertDontSee('Legon Test Hospital');
+        $this->get('/facilities/f-dansoman')->assertOk(); // admins can still preview
         $this->actingAs($admin)->delete('/admin/facilities/f-dansoman')->assertRedirect('/admin/facilities');
         $this->assertDatabaseMissing('services', ['id' => 's-gyn-dansoman']);
     }

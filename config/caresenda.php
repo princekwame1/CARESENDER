@@ -43,9 +43,17 @@ return [
     // Public contact details shown on /contact; leave empty to show only the form.
     'contact' => [
         'email' => env('CARESENDA_CONTACT_EMAIL'),
-        'phone' => env('CARESENDA_CONTACT_PHONE'),
+        'phone' => env('CARESENDA_CONTACT_PHONE', '0302965188'),
         'whatsapp' => env('CARESENDA_CONTACT_WHATSAPP'),
         'hours' => env('CARESENDA_CONTACT_HOURS'),
+    ],
+
+    // Secretariat account created by SecretariatSeeder; skipped while the email or password is empty.
+    'secretariat' => [
+        'name' => env('SECRETARIAT_NAME', 'CareSenda Secretariat'),
+        'username' => env('SECRETARIAT_USERNAME', 'secretariat'),
+        'email' => env('SECRETARIAT_EMAIL'),
+        'password' => env('SECRETARIAT_PASSWORD'),
     ],
 
     // Starting value only: switched on and off in /admin/payments (plans are managed there too).

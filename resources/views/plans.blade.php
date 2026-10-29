@@ -14,6 +14,15 @@
             <p class="mt-8 flex items-start gap-3 rounded-2xl bg-accent-soft px-4 py-3 text-sm"><x-icon name="info" class="mt-0.5 size-4 shrink-0 text-accent" />Everything is open for you right now, so you don’t need a plan.</p>
         @endunless
 
+        @guest
+            @if ($freeTrial = \App\Services\AccessGate::freeTrialOffer())
+                <div class="mt-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-accent-soft px-4 py-3 text-sm">
+                    <p><span class="font-semibold text-accent">Free trial.</span> Create an account and get {{ $freeTrial }} before you choose a plan.</p>
+                    <a href="{{ route('register', ['back' => '/search']) }}" class="btn-primary">Sign up free</a>
+                </div>
+            @endif
+        @endguest
+
         @auth
             @if ($required)
                 <section class="card mt-8 p-6">

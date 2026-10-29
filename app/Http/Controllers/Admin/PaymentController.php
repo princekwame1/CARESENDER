@@ -17,7 +17,7 @@ class PaymentController extends Controller
             'status' => ['nullable', 'in:paid,pending,failed'],
         ]);
 
-        $passes = AccessPass::with('user:id,name,email')
+        $passes = AccessPass::with('user:id,name,email')->bought()
             ->when($filters['q'] ?? null, function ($query, string $term) {
                 $like = '%'.addcslashes($term, '%_\\').'%';
                 $query->where(fn ($q) => $q->where('reference', 'like', $like)->orWhere('plan_name', 'like', $like)
@@ -32,7 +32,7 @@ class PaymentController extends Controller
             'passes' => $passes,
             'filters' => $filters,
             'revenue' => AccessPass::where('status', 'paid')->where('paid_at', '>=', now()->subDays(30))->sum('amount') / 100,
-            'paidCount' => AccessPass::where('status', 'paid')->where('paid_at', '>=', now()->subDays(30))->count(),
+            'paidCount' => AccessPass::bought()->where('status', 'paid')->where('paid_at', '>=', now()->subDays(30))->count(),
         ]);
     }
 }

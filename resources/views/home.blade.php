@@ -41,6 +41,12 @@
                             <a href="{{ route('search', ['q' => $q]) }}" class="chip !bg-surface/70 !py-1.5 text-xs">{{ $q }}</a>
                         @endforeach
                     </div>
+
+                    @if ($freeTrial = \App\Services\AccessGate::freeTrialOffer())
+                        <a href="{{ route('register', ['back' => '/search']) }}" class="mt-6 inline-flex items-center gap-2 rounded-full bg-accent-soft px-4 py-2 text-sm font-semibold text-accent transition hover:ring-1 hover:ring-accent/40">
+                            <x-icon name="shield" class="size-4" />Sign up and get {{ $freeTrial }}<x-icon name="arrow" class="size-4" />
+                        </a>
+                    @endif
                 </div>
 
                 <figure class="relative mx-auto w-full max-w-[22rem] sm:max-w-[26rem] lg:max-w-[32rem] 2xl:max-w-[36rem] reveal [animation-delay:.15s]">

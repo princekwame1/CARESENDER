@@ -56,7 +56,8 @@ Route::middleware('guest')->group(function () {
 });
 Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')->name('logout');
 
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
+// Admins and the secretariat: the directory, messages and their own profile. The secretariat lands on Facilities.
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(function () {
     Route::get('/', Admin\DashboardController::class)->name('dashboard');
     Route::get('/facilities', [Admin\FacilityController::class, 'index'])->name('facilities.index');
     Route::get('/facilities/create', [Admin\FacilityController::class, 'create'])->name('facilities.create');
@@ -64,25 +65,38 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/facilities/{facility}/edit', [Admin\FacilityController::class, 'edit'])->name('facilities.edit');
     Route::put('/facilities/{facility}', [Admin\FacilityController::class, 'update'])->name('facilities.update');
     Route::patch('/facilities/{facility}/toggle', [Admin\FacilityController::class, 'toggle'])->name('facilities.toggle');
-    Route::delete('/facilities/{facility}', [Admin\FacilityController::class, 'destroy'])->name('facilities.destroy');
     Route::post('/facilities/{facility}/services', [Admin\FacilityController::class, 'storeService'])->name('facilities.services.store');
     Route::delete('/facilities/{facility}/services/{service}', [Admin\FacilityController::class, 'destroyService'])->name('facilities.services.destroy');
     Route::get('/services', [Admin\CatalogController::class, 'index'])->name('catalog.index');
     Route::post('/services', [Admin\CatalogController::class, 'store'])->name('catalog.store');
     Route::put('/services/{service}', [Admin\CatalogController::class, 'update'])->name('catalog.update');
-    Route::delete('/services/{service}', [Admin\CatalogController::class, 'destroy'])->name('catalog.destroy');
     Route::get('/specialties', [Admin\SpecialtyController::class, 'index'])->name('specialties.index');
     Route::post('/specialties', [Admin\SpecialtyController::class, 'store'])->name('specialties.store');
     Route::put('/specialties/{specialty}', [Admin\SpecialtyController::class, 'update'])->name('specialties.update');
+    Route::get('/messages', [Admin\MessageController::class, 'index'])->name('messages.index');
+    Route::patch('/messages/{message}/read', [Admin\MessageController::class, 'toggleRead'])->name('messages.read');
+    Route::post('/messages/{message}/reply', [Admin\MessageController::class, 'reply'])->name('messages.reply');
+    Route::get('/profile', [Admin\ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [Admin\ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [Admin\ProfileController::class, 'password'])->name('profile.password');
+    Route::post('/profile/avatar', [Admin\ProfileController::class, 'avatar'])->name('profile.avatar');
+});
+
+// Admins only: deleting directory records, money, settings, page content, data export, users and the team.
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
+    Route::delete('/facilities/{facility}', [Admin\FacilityController::class, 'destroy'])->name('facilities.destroy');
+    Route::delete('/services/{service}', [Admin\CatalogController::class, 'destroy'])->name('catalog.destroy');
     Route::delete('/specialties/{specialty}', [Admin\SpecialtyController::class, 'destroy'])->name('specialties.destroy');
     Route::get('/content', [Admin\ContentController::class, 'index'])->name('content.index');
     Route::get('/content/{page}', [Admin\ContentController::class, 'edit'])->name('content.edit');
     Route::put('/content/{page}', [Admin\ContentController::class, 'update'])->name('content.update');
     Route::get('/export', [Admin\FacilityController::class, 'export'])->name('export');
-    Route::get('/profile', [Admin\ProfileController::class, 'edit'])->name('profile.edit');
-    Route::put('/profile', [Admin\ProfileController::class, 'update'])->name('profile.update');
-    Route::put('/profile/password', [Admin\ProfileController::class, 'password'])->name('profile.password');
-    Route::post('/profile/avatar', [Admin\ProfileController::class, 'avatar'])->name('profile.avatar');
+    Route::get('/users', [Admin\UserController::class, 'index'])->name('users.index');
+    Route::post('/users', [Admin\UserController::class, 'store'])->name('users.store');
+    Route::get('/team', [Admin\TeamController::class, 'index'])->name('team.index');
+    Route::post('/team', [Admin\TeamController::class, 'store'])->name('team.store');
+    Route::put('/team/{user}', [Admin\TeamController::class, 'update'])->name('team.update');
+    Route::delete('/team/{user}', [Admin\TeamController::class, 'destroy'])->name('team.destroy');
     Route::get('/payments', [Admin\PaymentController::class, 'index'])->name('payments.index');
     Route::get('/settings/{tab?}', [Admin\SettingsController::class, 'edit'])->whereIn('tab', Admin\SettingsController::TABS)->name('settings.edit');
     Route::put('/settings/branding', [Admin\SettingsController::class, 'branding'])->name('settings.branding');
@@ -92,6 +106,4 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::put('/plans/{plan}', [Admin\PlanController::class, 'update'])->name('plans.update');
     Route::delete('/plans/{plan}', [Admin\PlanController::class, 'destroy'])->name('plans.destroy');
     Route::view('/api', 'admin.api')->name('api');
-    Route::get('/messages', [Admin\MessageController::class, 'index'])->name('messages.index');
-    Route::patch('/messages/{message}/read', [Admin\MessageController::class, 'toggleRead'])->name('messages.read');
 });
